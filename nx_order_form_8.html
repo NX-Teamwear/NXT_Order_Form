@@ -507,13 +507,27 @@ textarea { resize: vertical; min-height: 80px; margin-bottom: 0; }
 .preview-pos-btn.filled-pos { border-color: var(--nx-green); color: var(--nx-green); background: rgba(61,214,140,0.1); }
 .preview-pos-btn.active-pos { border-color: var(--nx-blue); color: var(--nx-blue); background: var(--nx-blue-dim); }
 
-.logo-picker-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.logo-picker-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; padding: 8px 6px 0; }
 .logo-pick-item { width: 40px; height: 40px; background: #f5f5f0; border-radius: 6px; border: 2px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 3px; transition: all .15s; }
 .logo-pick-item:hover { border-color: rgba(91,195,235,0.4); }
 .logo-pick-item.active-logo { border-color: var(--nx-blue); }
 .logo-pick-item img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .logo-pick-item.clear-btn { background: rgba(232,75,75,0.1); border-color: rgba(232,75,75,0.2); color: var(--nx-red); font-size: 16px; font-weight: 800; }
 .logo-pick-item.clear-btn:hover { background: rgba(232,75,75,0.2); border-color: var(--nx-red); }
+
+.logo-pick-wrap { position: relative; display: inline-flex; }
+.logo-pick-item.text-logo span { font-size: 9px; font-weight: 800; line-height: 1.05; text-align: center; color: #0e1a2b; padding: 2px; overflow: hidden; word-break: break-word; }
+.logo-pick-item.file-logo span { font-size: 9px; font-weight: 800; color: #0e1a2b; letter-spacing: 0.5px; }
+.logo-pick-edit { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; border: 0.5px solid var(--nx-border); background: var(--nx-navy3); color: var(--nx-blue); font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
+.logo-pick-edit:hover { background: var(--nx-blue-dim); }
+
+.logo-detail-form { margin-top: 8px; padding: 10px 12px; border: 0.5px solid var(--nx-border2); border-radius: 8px; background: rgba(255,255,255,0.02); }
+.logo-detail-form label { margin-top: 8px; }
+.logo-detail-form label:first-of-type { margin-top: 0; }
+.logo-detail-form input[type=text] { margin-bottom: 0; }
+button.upload-logo-btn { line-height: 1; }
+
+.pos-marker.filled span { overflow: hidden; max-width: 100%; max-height: 100%; }
 
 .upload-logo-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--nx-blue); background: var(--nx-blue-dim); border: 0.5px solid var(--nx-border); border-radius: 5px; padding: 5px 10px; cursor: pointer; font-family: "Barlow", sans-serif; font-weight: 600; }
 
@@ -1454,10 +1468,11 @@ function buildPayload() {
         logo_details:  bd.map(d => ({
           position:  d.position,
           view:      d.view,
-          type:      'upload',
+          type:      d.kind === 'text' ? 'text' : 'upload',
           file_name: d.file_name,
-          text:      '—',
-          font:      '—'
+          text:      d.text,
+          font:      d.font,
+          notes:     d.notes
         })),
         sizes: Object.entries(line.sizes)
           .filter(([,v]) => v > 0)
@@ -1504,8 +1519,10 @@ function buildEmailSummary() {
     const bd = lineBrandingDetails(line);
     s += `  Logo positions: ${bd.length ? bd.map(d=>d.position).join(', ') : '—'}\n`;
     bd.forEach(d => {
-      if (d.file_name && d.file_name !== '—') s += `    ${d.position} (${d.view}): FILE — ${d.file_name}\n`;
-      else                                    s += `    ${d.position} (${d.view}): position selected — artwork to follow\n`;
+      const extra = (d.notes && d.notes !== '—') ? ` [${d.notes}]` : '';
+      if (d.kind === 'text')                       s += `    ${d.position} (${d.view}): TEXT — "${d.text}"${(d.font && d.font !== '—') ? ' (' + d.font + ')' : ''}${extra}\n`;
+      else if (d.file_name && d.file_name !== '—') s += `    ${d.position} (${d.view}): FILE — ${d.file_name}${extra}\n`;
+      else                                         s += `    ${d.position} (${d.view}): position selected — artwork to follow${extra}\n`;
     });
     const pers = (line.pers||[]).filter(r=>r.name||r.number);
     if (pers.length) { s += `  Personalisation:\n`; pers.forEach(r => s+=`    Size ${r.size}: ${r.name}${r.number?' #'+r.number:''}\n`); }
@@ -1811,6 +1828,17 @@ const LABEL_MAP = {
   frontpanel: 'Front Panel',
 };
 
+// HTML-escape user-supplied strings before inserting into markup.
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+    { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+  ));
+}
+
+function getLogoById(id) {
+  return previewUploadedLogos.find(l => l.id === id);
+}
+
 function prettyLabel(raw) {
   const s = String(raw == null ? '' : raw).trim();
   const key = s.toLowerCase().replace(/[^a-z0-9]+/g, '');
@@ -1836,7 +1864,7 @@ let previewUploadedLogos = [];
 let previewUploadSeq = 0;
 
 function getPreviewState(uid) {
-  if (!previewState[uid]) previewState[uid] = { activePos: null, placements: {}, view: 'front' };
+  if (!previewState[uid]) previewState[uid] = { activePos: null, placements: {}, view: 'front', showTextForm: false, editLogoId: null };
   return previewState[uid];
 }
 
@@ -1888,11 +1916,15 @@ function lineBrandingDetails(line) {
   Object.entries(ps.placements || {}).forEach(([posId, pl]) => {
     const pos = idx[posId];
     if (!pos) return;
-    const logo = previewUploadedLogos.find(l => l.id === (pl && pl.id));
+    const logo = getLogoById(pl && pl.id);
     out.push({
       position:  prettyLabel(pos.label),
       view:      backPos.some(b => b.id === posId) ? 'back' : 'front',
-      file_name: logo ? logo.label : '—'
+      kind:      logo ? (logo.kind || 'file') : 'file',
+      file_name: (logo && logo.kind !== 'text') ? logo.label : '—',
+      text:      (logo && logo.kind === 'text') ? logo.text : '—',
+      font:      (logo && logo.kind === 'text' && logo.font) ? logo.font : '—',
+      notes:     (logo && logo.notes) ? logo.notes : '—'
     });
   });
   return out;
@@ -1999,10 +2031,12 @@ function renderPreview() {
             style="${markerStyle(pos)}"
             onclick="selectPreviewPos(${line.uid},'${pos.id}')"
             title="${plabel}"
-          >${placement
-            ? `<img src="${placement.src}" alt="">`
-            : `<span style="font-size:9px;line-height:1;text-align:center;">${plabel.split(' ').map(w=>w[0]).join('')}</span>`
-          }</div>`;
+          >${(() => {
+            const lg = placement ? getLogoById(placement.id) : null;
+            if (lg) return logoMarkerInnerHTML(lg);
+            if (placement) return `<span style="font-size:9px;font-weight:800;color:#0e1a2b;">●</span>`;
+            return `<span style="font-size:9px;line-height:1;text-align:center;">${plabel.split(' ').map(w => w[0]).join('')}</span>`;
+          })()}</div>`;
         }).join('')}
         </div>
       </div>
@@ -2021,14 +2055,7 @@ function renderPreview() {
         </div>
 
         <div style="font-size:10px;font-weight:700;color:var(--nx-blue);text-transform:uppercase;letter-spacing:1px;margin-top:6px;margin-bottom:4px;">Place logo on selected position</div>
-        <div class="logo-picker-strip" id="prev-logos-${line.uid}">
-          ${renderLogoPickerHTML(line.uid, availableLogos)}
-        </div>
-
-        <label class="upload-logo-btn" style="margin-top:6px;width:fit-content;">
-          + Upload logos
-          <input type="file" accept="image/*" multiple style="display:none" onchange="handlePreviewUpload(${line.uid},this)">
-        </label>
+        <div id="prev-logoarea-${line.uid}">${renderLogoAreaHTML(line.uid, availableLogos)}</div>
       </div>
       <div id="prev-price-${line.uid}">${previewPriceBarHTML(line)}</div>
       <div class="preview-hint">Click a ● marker on the garment or a position button, then click a logo below to place it. This is a rough preview — our team produces accurate mockups before production.</div>
@@ -2040,6 +2067,24 @@ function renderPreview() {
   c.appendChild(grid);
 }
 
+function logoTileInnerHTML(logo) {
+  if (logo.kind === 'text') return `<span>${esc(logo.text || 'T')}</span>`;
+  if (logo.isImage)         return `<img src="${logo.src}" alt="">`;
+  const ext = ((logo.label || '').split('.').pop() || 'FILE').toUpperCase().slice(0, 4);
+  return `<span>${esc(ext)}</span>`;
+}
+
+function logoMarkerInnerHTML(logo) {
+  if (logo.kind === 'text') return `<span style="font-size:8px;font-weight:800;line-height:1;text-align:center;color:#0e1a2b;">${esc((logo.text || '').slice(0, 14))}</span>`;
+  if (logo.isImage)         return `<img src="${logo.src}" alt="">`;
+  const ext = ((logo.label || '').split('.').pop() || 'FILE').toUpperCase().slice(0, 4);
+  return `<span style="font-size:8px;font-weight:800;color:#0e1a2b;">${esc(ext)}</span>`;
+}
+
+function tileKindClass(logo) {
+  return logo.kind === 'text' ? 'text-logo' : (logo.isImage ? 'img-logo' : 'file-logo');
+}
+
 function renderLogoPickerHTML(uid, logos) {
   const ps = getPreviewState(uid);
   const activePlacement = ps.activePos ? ps.placements[ps.activePos] : null;
@@ -2047,19 +2092,67 @@ function renderLogoPickerHTML(uid, logos) {
   let html = '';
   logos.forEach(logo => {
     const isActive = activePlacement && activePlacement.id === logo.id;
-    html += `<div
-      class="logo-pick-item ${isActive ? 'active-logo' : ''}"
-      onclick="placePreviewLogo(${uid},'${logo.id}','${logo.src.replace(/'/g, "\'")}')"
-      title="${logo.label || 'Logo'}"
-    ><img src="${logo.src}" alt=""></div>`;
+    html += `<div class="logo-pick-wrap">
+      <div class="logo-pick-item ${tileKindClass(logo)} ${isActive ? 'active-logo' : ''}"
+        onclick="placePreviewLogo(${uid},'${logo.id}')"
+        title="${esc(logo.label || 'Logo')}"
+      >${logoTileInnerHTML(logo)}</div>
+      <button type="button" class="logo-pick-edit" title="Edit logo details" onclick="startEditLogo(${uid},'${logo.id}')">✎</button>
+    </div>`;
   });
 
-  // Clear button if something is placed
+  // Clear button if something is placed on the active position
   if (activePlacement) {
-    html += `<div class="logo-pick-item clear-btn" onclick="clearPreviewLogo(${uid})" title="Remove logo">✕</div>`;
+    html += `<div class="logo-pick-item clear-btn" onclick="clearPreviewLogo(${uid})" title="Remove logo from this position">✕</div>`;
   }
 
-  return html || '<span style="font-size:11px;color:var(--nx-muted);">No logos yet — use the “+ Upload logos” button below to add your artwork. You can select several at once.</span>';
+  return html || '<span style="font-size:11px;color:var(--nx-muted);">No logos yet — upload artwork or add a text logo using the buttons below. You can upload several at once.</span>';
+}
+
+function renderLogoAreaHTML(uid, logos) {
+  const ps = getPreviewState(uid);
+  let html = `<div class="logo-picker-strip" id="prev-logos-${uid}">${renderLogoPickerHTML(uid, logos)}</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+      <label class="upload-logo-btn">
+        ↑ Upload logos
+        <input type="file" accept=".ai,.eps,.pdf,.png,.svg,.jpg,.jpeg,.gif,.webp" multiple style="display:none" onchange="handlePreviewUpload(${uid},this)">
+      </label>
+      <button type="button" class="upload-logo-btn" onclick="toggleTextLogoForm(${uid})">Aa Add text logo</button>
+    </div>
+    <div style="font-size:10px;color:var(--nx-muted);margin-top:4px;letter-spacing:0.3px;">AI · EPS · PDF · PNG · SVG — vector files preferred</div>`;
+
+  if (ps.showTextForm) {
+    html += `<div class="logo-detail-form">
+      <label>Text to print / embroider</label>
+      <input type="text" id="txtlogo-${uid}" placeholder="e.g. THORNTON CC">
+      <label>Font preference (optional)</label>
+      <input type="text" id="txtfont-${uid}" placeholder="e.g. Bold block caps, condensed, serif…">
+      <div style="display:flex;gap:6px;margin-top:10px;">
+        <button type="button" class="upload-logo-btn" onclick="commitTextLogo(${uid})">Add text logo</button>
+        <button type="button" class="upload-logo-btn" style="background:transparent;color:var(--nx-muted);" onclick="toggleTextLogoForm(${uid})">Cancel</button>
+      </div>
+    </div>`;
+  }
+
+  const editLogo = ps.editLogoId ? getLogoById(ps.editLogoId) : null;
+  if (editLogo) {
+    html += `<div class="logo-detail-form">
+      <div style="font-size:11px;color:var(--nx-white);font-weight:700;margin-bottom:8px;">Editing: ${esc(editLogo.kind === 'text' ? ('“' + (editLogo.text || '') + '”') : editLogo.label)}</div>
+      ${editLogo.kind === 'text' ? `
+        <label>Text to print / embroider</label>
+        <input type="text" value="${esc(editLogo.text)}" onchange="updateLogoField(${uid},'${editLogo.id}','text',this.value)">
+        <label>Font preference (optional)</label>
+        <input type="text" value="${esc(editLogo.font)}" onchange="updateLogoField(${uid},'${editLogo.id}','font',this.value)">
+      ` : ''}
+      <label>Colour notes / artwork description</label>
+      <input type="text" placeholder="e.g. Club badge — navy, gold, white" value="${esc(editLogo.notes)}" onchange="updateLogoField(${uid},'${editLogo.id}','notes',this.value)">
+      <div style="margin-top:10px;">
+        <button type="button" class="upload-logo-btn" onclick="closeLogoEdit(${uid})">Done</button>
+      </div>
+    </div>`;
+  }
+
+  return html;
 }
 
 function buildPreviewLogoList() {
@@ -2083,13 +2176,57 @@ function selectPreviewPos(uid, posId) {
   renderPreviewCard(uid);
 }
 
-function placePreviewLogo(uid, logoId, logoSrc) {
+function placePreviewLogo(uid, logoId) {
   const ps = getPreviewState(uid);
   if (!ps.activePos) return;
-  ps.placements[ps.activePos] = { id: logoId, src: logoSrc };
+  ps.placements[ps.activePos] = { id: logoId };
   syncLineBranding(uid);
   renderPreviewCard(uid);
   updateAllSizeTotals();
+}
+
+function toggleTextLogoForm(uid) {
+  const ps = getPreviewState(uid);
+  ps.showTextForm = !ps.showTextForm;
+  if (ps.showTextForm) ps.editLogoId = null;
+  renderPreviewCard(uid);
+  if (ps.showTextForm) {
+    const el = document.getElementById('txtlogo-' + uid);
+    if (el) el.focus();
+  }
+}
+
+function commitTextLogo(uid) {
+  const ti = document.getElementById('txtlogo-' + uid);
+  const fi = document.getElementById('txtfont-' + uid);
+  const text = ((ti && ti.value) || '').trim();
+  if (!text) { if (ti) ti.focus(); return; }
+  const font = ((fi && fi.value) || '').trim();
+  previewUploadedLogos.push({ id: 'prev-text-' + (++previewUploadSeq), kind: 'text', text, font, label: text, notes: '' });
+  const ps = getPreviewState(uid);
+  ps.showTextForm = false;
+  renderPreviewCard(uid);
+}
+
+function startEditLogo(uid, logoId) {
+  const ps = getPreviewState(uid);
+  ps.editLogoId = logoId;
+  ps.showTextForm = false;
+  renderPreviewCard(uid);
+}
+
+function closeLogoEdit(uid) {
+  const ps = getPreviewState(uid);
+  ps.editLogoId = null;
+  renderPreviewCard(uid);
+}
+
+function updateLogoField(uid, logoId, field, value) {
+  const logo = getLogoById(logoId);
+  if (!logo) return;
+  logo[field] = value;
+  if (logo.kind === 'text' && field === 'text') logo.label = value || '(text)';
+  renderPreviewCard(uid);
 }
 
 function clearPreviewLogo(uid) {
@@ -2106,7 +2243,8 @@ function handlePreviewUpload(uid, input) {
   if (!files.length) return;
   files.forEach(file => {
     const src = URL.createObjectURL(file);
-    previewUploadedLogos.push({ id: 'prev-upload-' + (++previewUploadSeq), src, label: file.name, file });
+    const isImage = /^image\//.test(file.type);
+    previewUploadedLogos.push({ id: 'prev-upload-' + (++previewUploadSeq), kind: 'file', file, src, isImage, label: file.name, notes: '' });
   });
   input.value = '';
   renderPreviewCard(uid);
@@ -2154,9 +2292,12 @@ function renderPreviewCard(uid) {
       div.style.cssText = markerStyle(pos);
       div.title = plabel;
       div.onclick = () => selectPreviewPos(uid, pos.id);
-      div.innerHTML = placement
-        ? `<img src="${placement.src}" alt="">`
-        : `<span style="font-size:9px;line-height:1;text-align:center;">${plabel.split(' ').map(w=>w[0]).join('')}</span>`;
+      const lg = placement ? getLogoById(placement.id) : null;
+      div.innerHTML = lg
+        ? logoMarkerInnerHTML(lg)
+        : (placement
+            ? `<span style="font-size:9px;font-weight:800;color:#0e1a2b;">●</span>`
+            : `<span style="font-size:9px;line-height:1;text-align:center;">${plabel.split(' ').map(w=>w[0]).join('')}</span>`);
       box.appendChild(div);
     });
   }
@@ -2174,9 +2315,9 @@ function renderPreviewCard(uid) {
     }).join('');
   }
 
-  // Update logo picker
-  const logoPicker = document.getElementById(`prev-logos-${uid}`);
-  if (logoPicker) logoPicker.innerHTML = renderLogoPickerHTML(uid, availableLogos);
+  // Update logo area (picker + add controls + text/edit forms)
+  const logoArea = document.getElementById(`prev-logoarea-${uid}`);
+  if (logoArea) logoArea.innerHTML = renderLogoAreaHTML(uid, availableLogos);
 
   // Update price bar
   const priceEl = document.getElementById('prev-price-' + uid);
