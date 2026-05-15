@@ -468,7 +468,7 @@ textarea { resize: vertical; min-height: 80px; margin-bottom: 0; }
 }
 
 /* ── PREVIEW STEP ── */
-.preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.preview-grid { display: flex; flex-direction: column; gap: 16px; }
 .preview-card { background: var(--nx-navy2); border: 0.5px solid var(--nx-border2); border-radius: 12px; overflow: hidden; }
 .preview-card-hdr { padding: 12px 16px; border-bottom: 0.5px solid var(--nx-border2); background: rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .preview-card-title { font-family: "Barlow Condensed", sans-serif; font-size: 15px; font-weight: 800; text-transform: uppercase; }
@@ -518,8 +518,6 @@ textarea { resize: vertical; min-height: 80px; margin-bottom: 0; }
 .upload-logo-btn { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--nx-blue); background: var(--nx-blue-dim); border: 0.5px solid var(--nx-border); border-radius: 5px; padding: 5px 10px; cursor: pointer; font-family: "Barlow", sans-serif; font-weight: 600; }
 
 .preview-hint { font-size: 11px; color: var(--nx-muted); line-height: 1.5; padding: 8px 14px; border-top: 0.5px solid var(--nx-border2); background: rgba(0,0,0,0.1); }
-
-@media(max-width:540px) { .preview-grid { grid-template-columns: 1fr; } }
 
 </style>
 </head>
@@ -585,12 +583,11 @@ textarea { resize: vertical; min-height: 80px; margin-bottom: 0; }
       </div>
     </div>
 
-    <!-- ═══ STEP 3: BRANDING ═══ -->
+    <!-- ═══ STEP 3: BRANDING & PREVIEW ═══ -->
     <div class="nx-panel" id="p2">
       <div class="ptitle">Branding &amp; Preview</div>
-      <div class="psub">Tick every position you want a logo on — <strong style="color:var(--nx-blue)">Left Breast is free</strong>, additional positions carry a small supplement confirmed before production. Upload your artwork below and see it previewed live on your garment. Name &amp; number printing is in the next step.</div>
-      <div id="brandingCfg"></div>
-      <div id="previewCfg" style="margin-top:24px;"></div>
+      <div class="psub">Build each garment's branding right on the preview — pick a position, then place your logo on it. <strong style="color:var(--nx-blue)">Left Breast is free</strong>; additional positions carry a small supplement confirmed before production.</div>
+      <div id="previewCfg"></div>
       <div class="nx-actions">
         <button class="btn-back" onclick="goStep(1)">← Back</button>
         <button class="btn-next" onclick="goStep(3)">Continue →</button>
@@ -963,18 +960,11 @@ const PRODUCT_IMAGES = {
   },
 };
 
-const LOGO_POS = [
-  {id:'left_breast',  name:'Left Breast',          note:'Included free', free:true},
-  {id:'right_breast', name:'Right Breast',          note:'+Small logo',   free:false},
-  {id:'large_chest',  name:'Large chest / sponsor', note:'+Large logo',   free:false},
-  {id:'back',         name:'Back',                  note:'+Logo supplement',free:false},
-  {id:'sleeve',       name:'Sleeve',                note:'+Small logo',   free:false},
-  {id:'yolke',        name:'Yolke',                note:'+Small logo',   free:false},
-  {id:'shoulder',     name:'Shoulder',              note:'+Logo supplement',free:false}
-];
-
-const LARGE_POS  = ['large_chest','shoulder'];
-const SMALL_POS  = ['right_breast','sleeve','yolke','back'];
+// Branding price buckets — keyed by the normalised preview-position label
+// (see brandingKey). Anything not listed (Left Breast, Front Panel) is the
+// included base logo; small/large positions add the matching supplement.
+const SMALL_POS_KEYS = ['rightbreast','leftsleeve','rightsleeve','backcentre'];
+const LARGE_POS_KEYS = ['centrechest','shoulders','shoulder','uppermidbacknotshoulders','tail'];
 
 const COLOUR_HEX = {'Arctic White':'#f5f5ec','White':'#ffffff','Jet Black':'#181818','Black':'#111111','French Navy':'#1a2455','Navy':'#162040','Dark Navy':'#0f1830','Oxford Navy':'#1e2d5a','New French Navy':'#1a2455','Royal Blue':'#2d5fa8','Royal':'#2d5fa8','Bright Royal':'#3060c0','Sapphire Blue':'#1e5ab0','Cornflower Blue':'#6482c8','Cornflower':'#6482c8','Fire Red':'#d42020','Red':'#cc2020','Classic Red':'#c82020','Burgundy':'#7a1f3a','Bottle Green':'#1a5c2a','Bottle':'#1a5c2a','Kelly Green':'#2d8a2d','Kelly':'#2d8a2d','Earthy Green':'#4a7a3a','Forest Green':'#1e5c28','Electric Green':'#40e040','Lime Green':'#88e030','Olive Green':'#6b7a28','Pepper Green':'#3a6a2a','Spruce':'#2a5a3a','Verdant Green':'#3a7a3a','Charcoal':'#3a3a3a','Heather Grey':'#a0a0b0','Graphite Grey':'#505060','Anthracite':'#404040','Electric Orange':'#f06020','Orange':'#f07020','Orange Crush':'#e85020','Hot Pink':'#e0406a','Electric Pink':'#f050a0','Cotton Pink':'#f0b0c0','Dark Pink':'#c04080','Purple':'#6030a0','Maroon':'#6a1a2a','Sun Yellow':'#f8d020','Sunflower':'#f8c820','Electric Yellow':'#f8f020','Gold':'#c8a020','Ochre':'#c8882a','Spectra Yellow':'#f8e020','Viva Yellow':'#f8d820','Ash':'#c0c0c0','Blue Soul':'#4060a0','Desert Sand':'#d8b87a','Hawaiian Blue':'#2878b8','Pool Blue':'#4898c8','Jade':'#2a9a6a','Stargazer':'#4040a0','Worker Blue':'#3858a0','Sky Blue':'#60a0d8','Digital Lavender':'#b098d0'};
 
@@ -985,14 +975,14 @@ let ageFilter = 'All', catFilter = 'All';
 
 function newLine(code) {
   const p = PRODUCTS.find(x => x.code === code);
-  return { uid: ++uid, code, colour: p.colours[0], positions: ['left_breast'], logoEntries: { left_breast: { type:'upload', text:'', fileName:'' } }, sizes: {}, pers: [] };
+  return { uid: ++uid, code, colour: p.colours[0], positions: [], sizes: {}, pers: [] };
 }
 function getLine(u) { return lines.find(l => l.uid === u); }
 
 /* ── PRICING ── */
 function priceTier(positions) {
-  const hasL = positions.some(p => LARGE_POS.includes(p));
-  const hasS = positions.some(p => SMALL_POS.includes(p));
+  const hasL = positions.some(p => LARGE_POS_KEYS.includes(p));
+  const hasS = positions.some(p => SMALL_POS_KEYS.includes(p));
   if (hasL && hasS) return 'both';
   if (hasL)         return 'large';
   if (hasS)         return 'small';
@@ -1168,172 +1158,12 @@ function removeLine(u) {
 }
 
 /* ════════════════════════════════════════════════
-   STEP 3 — BRANDING
+   STEP 3 — BRANDING & PREVIEW
+   Branding (logo position + artwork selection) is now
+   handled entirely inside the Garment Preview below.
+   See renderPreview() and the preview helpers in the
+   STEP 4 — LOGO PREVIEW section.
 ════════════════════════════════════════════════ */
-function renderBranding() {
-  const c = document.getElementById('brandingCfg');
-  c.innerHTML = '';
-  lines.forEach((line, idx) => {
-    const p    = PRODUCTS.find(x => x.code === line.code);
-    const dups = lines.filter(l => l.code === line.code);
-    const di   = dups.indexOf(line) + 1;
-    const showDup = dups.length > 1;
-
-    const block = document.createElement('div');
-    block.className = 'block';
-    block.innerHTML = `
-      <div class="block-hdr">
-        <div style="flex:1;">
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-            <div class="block-title">${p.name}${showDup ? ` — Design ${di}` : ''}</div>
-            <div id="brand-price-${line.uid}" style="font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--nx-blue);">£${linePrice(line).toFixed(2)}<span style="font-size:11px;font-weight:600;color:var(--nx-muted);margin-left:3px;">/ item</span></div>
-          </div>
-          <div class="block-sub">${p.code} · <span style="color:var(--nx-blue);">${line.colour}</span></div>
-        </div>
-        ${idx > 0 ? `<button class="copy-btn" onclick="copyBranding(${lines[0].uid},${line.uid})">↙ Copy from first</button>` : '<span style="font-size:11px;color:var(--nx-green);">↑ Configure this first</span>'}
-      </div>
-      <div class="block-body">
-        <div class="slabel">Tick all logo positions you need</div>
-        <div class="logo-grid" id="lg-${line.uid}">
-          ${LOGO_POS.map(pos => `
-            <div class="logo-pos${line.positions.includes(pos.id)?' sel':''} ${pos.free?'free-pos':''}" id="lp-${line.uid}-${pos.id}" onclick="togglePos(${line.uid},'${pos.id}')">
-              <div class="lp-chk">${line.positions.includes(pos.id)?'✓':''}</div>
-              <div>
-                <div class="lp-name">${pos.name}</div>
-                <div class="lp-note${pos.free?' free':''}">${pos.note}</div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-        <div class="warn-box">
-          <span>ℹ</span>
-          <span>Individual <strong>name &amp; number</strong> printing is handled in the <strong>next step</strong>. Logo positions selected here apply to all items of this product line.</span>
-        </div>
-        <div id="le-${line.uid}"></div>
-        <div id="pb-${line.uid}"></div>
-      </div>
-    `;
-    c.appendChild(block);
-    renderLogoEntries(line.uid);
-    renderPriceBar(line.uid);
-  });
-  renderPreview();
-}
-
-function togglePos(u, posId) {
-  const line = getLine(u);
-  if (!line) return;
-  const i = line.positions.indexOf(posId);
-  if (i >= 0 && line.positions.length > 1) {
-    line.positions.splice(i, 1);
-    delete line.logoEntries[posId];
-  } else if (i < 0) {
-    line.positions.push(posId);
-    line.logoEntries[posId] = { type:'upload', text:'', fileName:'' };
-  }
-  LOGO_POS.forEach(pos => {
-    const el = document.getElementById(`lp-${u}-${pos.id}`);
-    if (!el) return;
-    const on = line.positions.includes(pos.id);
-    el.className = `logo-pos${on?' sel':''} ${pos.free?'free-pos':''}`;
-    el.querySelector('.lp-chk').textContent = on ? '✓' : '';
-  });
-  renderLogoEntries(u);
-  renderPriceBar(u);
-  renderPreview();
-  // refresh size page cost column if already rendered
-  updateAllSizeTotals();
-}
-
-function renderLogoEntries(u) {
-  const line = getLine(u);
-  const c    = document.getElementById(`le-${u}`);
-  if (!c || !line) return;
-  c.innerHTML = '';
-  line.positions.forEach(posId => {
-    const pos = LOGO_POS.find(p => p.id === posId);
-    const e   = line.logoEntries[posId] || { type:'upload', text:'', fileName:'' };
-    const div = document.createElement('div');
-    div.className = 'logo-entry';
-    div.innerHTML = `
-      <div class="logo-entry-title">
-        <span style="width:6px;height:6px;border-radius:50%;background:var(--nx-blue);display:inline-block;flex-shrink:0;"></span>
-        ${pos.name}
-        ${pos.free ? '<span style="font-size:9px;color:var(--nx-green);background:rgba(61,214,140,0.15);padding:2px 7px;border-radius:3px;margin-left:4px;">FREE</span>' : ''}
-      </div>
-      <div class="type-toggle">
-        <button class="type-btn${e.type==='upload'?' active':''}" onclick="setLogoType(${u},'${posId}','upload')">↑ Upload artwork</button>
-        <button class="type-btn${e.type==='text'?' active':''}" onclick="setLogoType(${u},'${posId}','text')">Aa Text only</button>
-      </div>
-      ${e.type === 'upload' ? `
-        <input type="file" id="fi-${u}-${posId}" accept=".ai,.eps,.pdf,.png,.svg,.jpg" style="display:none" onchange="handleFile(${u},'${posId}',this)">
-        <div class="upload-area${e.fileName?' has-file':''}" onclick="document.getElementById('fi-${u}-${posId}').click()">
-          <div class="upload-area-label" style="color:${e.fileName?'var(--nx-green)':'var(--nx-muted)'};">${e.fileName ? '✓ ' + e.fileName : 'Click to upload artwork file'}</div>
-          <div class="upload-area-hint">AI · EPS · PDF · PNG · SVG — vector files preferred</div>
-        </div>
-        <label>Colour notes / artwork description</label>
-        <input type="text" placeholder="e.g. Club badge — navy, gold, white" value="${e.text||''}" onchange="updateLogoText(${u},'${posId}',this.value)" style="margin-bottom:0;">
-      ` : `
-        <label>Text to print / embroider</label>
-        <input type="text" placeholder="e.g. THORNTON CC" value="${e.text||''}" onchange="updateLogoText(${u},'${posId}',this.value)">
-        <label>Font preference (optional)</label>
-        <input type="text" placeholder="e.g. Bold block caps, condensed, serif..." value="${e.font||''}" onchange="updateLogoFont(${u},'${posId}',this.value)" style="margin-bottom:0;">
-      `}
-    `;
-    c.appendChild(div);
-  });
-}
-
-function renderPriceBar(u) {
-  const line = getLine(u);
-  const c    = document.getElementById(`pb-${u}`);
-  if (!c || !line) return;
-  const p    = PRODUCTS.find(x => x.code === line.code);
-  const tier = priceTier(line.positions);
-  const price = linePrice(line);
-  const tiers = [
-    {id:'base',  label:`£${p.rrp.toFixed(2)} — left breast only`},
-    {id:'small', label:`£${p.rrpSmall.toFixed(2)} — + small logo`},
-    {id:'large', label:`£${p.rrpLarge.toFixed(2)} — + sarge logo`},
-    {id:'both',  label:`£${p.rrpBoth.toFixed(2)} — + both types`}
-  ];
-  c.innerHTML = `
-    <div class="price-bar">
-      <div>
-        <div class="price-bar-lbl">Price per item — current selection</div>
-        <div class="price-bar-val">£${price.toFixed(2)}</div>
-      </div>
-      <div class="price-tiers">${tiers.map(t=>`<div class="ptier${tier===t.id?' on':''}">${t.label}</div>`).join('')}</div>
-    </div>`;
-  // Update header price badge
-  const hdrPrice = document.getElementById(`brand-price-${u}`);
-  if (hdrPrice) hdrPrice.innerHTML = `£${price.toFixed(2)}<span style="font-size:11px;font-weight:600;color:var(--nx-muted);margin-left:3px;">/ item</span>`;
-}
-
-function setLogoType(u, posId, type) {
-  const line = getLine(u);
-  if (line) { line.logoEntries[posId].type = type; renderLogoEntries(u); }
-}
-function handleFile(u, posId, input) {
-  const line = getLine(u);
-  if (line && input.files[0]) {
-    line.logoEntries[posId].fileName = input.files[0].name;
-    line.logoEntries[posId].file = input.files[0];
-    renderLogoEntries(u);
-    renderPreview();
-  }
-}
-function updateLogoText(u, posId, val) { const l = getLine(u); if (l) l.logoEntries[posId].text = val; }
-function updateLogoFont(u, posId, val) { const l = getLine(u); if (l && l.logoEntries[posId]) l.logoEntries[posId].font = val; }
-
-function copyBranding(srcU, destU) {
-  const src = getLine(srcU), dest = getLine(destU);
-  if (!src || !dest) return;
-  dest.positions   = [...src.positions];
-  dest.logoEntries = JSON.parse(JSON.stringify(src.logoEntries));
-  renderBranding();
-  renderPreview();
-}
 
 /* ════════════════════════════════════════════════
    STEP 4 — SIZES
@@ -1532,7 +1362,7 @@ function refreshPersSizeOpts(u) {
 ════════════════════════════════════════════════ */
 function goStep(n) {
   if (n === 1) renderColours();
-  if (n === 2) renderBranding();
+  if (n === 2) renderPreview();
   if (n === 3) renderSizes();
 
   document.querySelectorAll('.nx-panel').forEach(p => p.classList.remove('active'));
@@ -1576,6 +1406,7 @@ function validateContact() {
 ════════════════════════════════════════════════ */
 function buildPayload() {
   const now = new Date();
+  lines.forEach(l => syncLineBranding(l.uid));
   return {
     /* ── Meta ── */
     submitted_at:      now.toISOString(),
@@ -1607,6 +1438,7 @@ function buildPayload() {
       const dups  = lines.filter(l => l.code === line.code);
       const di    = dups.indexOf(line) + 1;
       const totalQty = Object.values(line.sizes).reduce((a,b)=>(a+(parseInt(b)||0)),0);
+      const bd       = lineBrandingDetails(line);
 
       return {
         line_number:   idx + 1,
@@ -1618,18 +1450,15 @@ function buildPayload() {
         colour:        line.colour,
         price_per_item: price.toFixed(2),
         price_tier:    tier,
-        logo_positions: line.positions.join(', '),
-        logo_details:  line.positions.map(posId => {
-          const pos = LOGO_POS.find(p => p.id === posId);
-          const e   = line.logoEntries[posId] || {};
-          return {
-            position:  pos.name,
-            type:      e.type || 'upload',
-            file_name: e.fileName || '—',
-            text:      e.text || '—',
-            font:      e.font || '—'
-          };
-        }),
+        logo_positions: bd.length ? bd.map(d => d.position).join(', ') : '—',
+        logo_details:  bd.map(d => ({
+          position:  d.position,
+          view:      d.view,
+          type:      'upload',
+          file_name: d.file_name,
+          text:      '—',
+          font:      '—'
+        })),
         sizes: Object.entries(line.sizes)
           .filter(([,v]) => v > 0)
           .map(([sz,qty]) => ({ size: sz, quantity: qty, line_cost: (qty * price).toFixed(2) })),
@@ -1672,13 +1501,11 @@ function buildEmailSummary() {
     s += `  Code: ${p.code} | Colour: ${line.colour} | £${price.toFixed(2)}/item\n`;
     const szs = Object.entries(line.sizes).filter(([,v])=>v>0);
     if (szs.length) s += `  Sizes: ${szs.map(([sz,q])=>`${sz}×${q}`).join(', ')}\n`;
-    s += `  Logo positions: ${line.positions.join(', ')}\n`;
-    line.positions.forEach(posId => {
-      const pos = LOGO_POS.find(p => p.id === posId);
-      const e   = line.logoEntries[posId] || {};
-      if (e.type==='text')  s += `    ${pos.name}: TEXT — "${e.text}" ${e.font?'('+e.font+')':''}\n`;
-      else if (e.fileName)  s += `    ${pos.name}: FILE — ${e.fileName} ${e.text?'('+e.text+')':''}\n`;
-      else if (e.text)      s += `    ${pos.name}: Notes — ${e.text}\n`;
+    const bd = lineBrandingDetails(line);
+    s += `  Logo positions: ${bd.length ? bd.map(d=>d.position).join(', ') : '—'}\n`;
+    bd.forEach(d => {
+      if (d.file_name && d.file_name !== '—') s += `    ${d.position} (${d.view}): FILE — ${d.file_name}\n`;
+      else                                    s += `    ${d.position} (${d.view}): position selected — artwork to follow\n`;
     });
     const pers = (line.pers||[]).filter(r=>r.name||r.number);
     if (pers.length) { s += `  Personalisation:\n`; pers.forEach(r => s+=`    Size ${r.size}: ${r.name}${r.number?' #'+r.number:''}\n`); }
@@ -2021,23 +1848,102 @@ function getPositions(code, view) {
   return (p && p[view]) ? p[view] : [];
 }
 
+/* ── Branding ↔ pricing bridge ──────────────────────────────
+   The Garment Preview is now the single place branding is
+   chosen. A logo *placed* on a position counts toward the
+   price tier and the submitted order. Positions are sorted
+   into price buckets by a normalised key derived from their
+   label (see FREE/SMALL/LARGE_POS_KEYS). */
+function brandingKey(label) {
+  return String(label == null ? '' : label).toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+// pos.id → pos object, across both front and back of a line.
+function posIndexForLine(line) {
+  const idx = {};
+  ['front', 'back'].forEach(v => getPositions(line.code, v).forEach(pos => { idx[pos.id] = pos; }));
+  return idx;
+}
+
+// Rebuild line.positions (price-bucket keys) from placed logos.
+function syncLineBranding(uid) {
+  const line = getLine(uid);
+  if (!line) return;
+  const ps  = getPreviewState(uid);
+  const idx = posIndexForLine(line);
+  const keys = [];
+  Object.keys(ps.placements || {}).forEach(posId => {
+    const pos = idx[posId];
+    if (!pos) return;
+    const k = brandingKey(pos.label);
+    if (k && !keys.includes(k)) keys.push(k);
+  });
+  line.positions = keys;
+}
+
+// Placed positions for a line, with clean label + uploaded file.
+function lineBrandingDetails(line) {
+  const ps  = getPreviewState(line.uid);
+  const idx = posIndexForLine(line);
+  const backPos = (PRODUCT_POSITIONS[line.code] && PRODUCT_POSITIONS[line.code].back) || [];
+  const out = [];
+  Object.entries(ps.placements || {}).forEach(([posId, pl]) => {
+    const pos = idx[posId];
+    if (!pos) return;
+    const logo = previewUploadedLogos.find(l => l.id === (pl && pl.id));
+    out.push({
+      position:  prettyLabel(pos.label),
+      view:      backPos.some(b => b.id === posId) ? 'back' : 'front',
+      file_name: logo ? logo.label : '—'
+    });
+  });
+  return out;
+}
+
+// Price summary bar shown inside each preview card.
+function previewPriceBarHTML(line) {
+  const p     = PRODUCTS.find(x => x.code === line.code);
+  const tier  = priceTier(line.positions);
+  const price = linePrice(line);
+  const tiers = [
+    {id:'base',  label:`£${p.rrp.toFixed(2)} — left breast only`},
+    {id:'small', label:`£${p.rrpSmall.toFixed(2)} — + small logo`},
+    {id:'large', label:`£${p.rrpLarge.toFixed(2)} — + large logo`},
+    {id:'both',  label:`£${p.rrpBoth.toFixed(2)} — + both types`}
+  ];
+  return `
+    <div class="price-bar" style="margin:0 14px 12px;">
+      <div>
+        <div class="price-bar-lbl">Price per item — current selection</div>
+        <div class="price-bar-val">£${price.toFixed(2)}</div>
+      </div>
+      <div class="price-tiers">${tiers.map(t=>`<div class="ptier${tier===t.id?' on':''}">${t.label}</div>`).join('')}</div>
+    </div>`;
+}
+
 function renderPreview() {
   const c = document.getElementById('previewCfg');
   if (!c) return;
   c.innerHTML = '';
 
-  // Build available logos: from branding entries + uploaded previews
+  // Logos available to place (uploaded via the preview's "+ Upload logo")
   const availableLogos = buildPreviewLogoList();
 
   if (lines.length === 0) return;
 
-  // Section header
+  // Section header + the migrated name/number notice
   const hdr = document.createElement('div');
-  hdr.style.cssText = 'border-top:0.5px solid var(--nx-border2);padding-top:24px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;';
+  hdr.style.cssText = 'margin-bottom:16px;';
   hdr.innerHTML = `
-    <div>
-      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--nx-white);">Garment Preview</div>
-      <div style="font-size:12px;color:var(--nx-muted);margin-top:3px;">Click a position marker on the garment, then select a logo from the panel below to preview placement. Your uploaded artwork will appear automatically.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--nx-white);">Garment Preview</div>
+        <div style="font-size:12px;color:var(--nx-muted);margin-top:3px;">Pick a position on the garment, then place your logo on it — your uploaded artwork appears automatically. This is a rough guide; our team produces accurate mockups before production.</div>
+      </div>
+    </div>
+    <div class="warn-box" style="margin-top:14px;margin-bottom:0;">
+      <span>ℹ</span>
+      <span>Individual <strong>name &amp; number</strong> printing is handled in the <strong>next step</strong>. Logo positions selected here apply to all items of this product line.</span>
     </div>
   `;
   c.appendChild(hdr);
@@ -2052,6 +1958,7 @@ function renderPreview() {
     const showDup = dups.length > 1;
 
     const ps = getPreviewState(line.uid);
+    syncLineBranding(line.uid);
     const view = ps.view || 'front';
     const positions = getPositions(line.code, view);
     if (positions.length > 0 && !positions.some(pp => pp.id === ps.activePos)) ps.activePos = positions[0].id;
@@ -2125,6 +2032,7 @@ function renderPreview() {
           <input type="file" accept="image/*" style="display:none" onchange="handlePreviewUpload(${line.uid},this)">
         </label>
       </div>
+      <div id="prev-price-${line.uid}">${previewPriceBarHTML(line)}</div>
       <div class="preview-hint">Click a ● marker on the garment or a position button, then click a logo below to place it. This is a rough preview — our team produces accurate mockups before production.</div>
     `;
 
@@ -2153,36 +2061,12 @@ function renderLogoPickerHTML(uid, logos) {
     html += `<div class="logo-pick-item clear-btn" onclick="clearPreviewLogo(${uid})" title="Remove logo">✕</div>`;
   }
 
-  return html || '<span style="font-size:11px;color:var(--nx-muted);">No logos yet — upload one above or add artwork in the branding step.</span>';
+  return html || '<span style="font-size:11px;color:var(--nx-muted);">No logos yet — use the “+ Upload logo” button below to add your artwork.</span>';
 }
 
 function buildPreviewLogoList() {
-  const logos = [];
-  const seen = new Set();
-
-  // Collect file uploads from branding step
-  lines.forEach(line => {
-    if (!line.logoEntries) return;
-    Object.entries(line.logoEntries).forEach(([posId, entry]) => {
-      if (entry && entry.fileName && entry.file) {
-        const key = entry.fileName;
-        if (!seen.has(key)) {
-          seen.add(key);
-          logos.push({ id: 'brand-' + key, src: URL.createObjectURL(entry.file), label: entry.fileName });
-        }
-      }
-    });
-  });
-
-  // Add preview-step uploaded logos
-  previewUploadedLogos.forEach(l => {
-    if (!seen.has(l.id)) {
-      seen.add(l.id);
-      logos.push(l);
-    }
-  });
-
-  return logos;
+  // All artwork now comes from the preview's "+ Upload logo" control.
+  return previewUploadedLogos.slice();
 }
 
 function togglePreviewView(uid, view) {
@@ -2205,14 +2089,18 @@ function placePreviewLogo(uid, logoId, logoSrc) {
   const ps = getPreviewState(uid);
   if (!ps.activePos) return;
   ps.placements[ps.activePos] = { id: logoId, src: logoSrc };
+  syncLineBranding(uid);
   renderPreviewCard(uid);
+  updateAllSizeTotals();
 }
 
 function clearPreviewLogo(uid) {
   const ps = getPreviewState(uid);
   if (!ps.activePos) return;
   delete ps.placements[ps.activePos];
+  syncLineBranding(uid);
   renderPreviewCard(uid);
+  updateAllSizeTotals();
 }
 
 function handlePreviewUpload(uid, input) {
@@ -2289,6 +2177,10 @@ function renderPreviewCard(uid) {
   // Update logo picker
   const logoPicker = document.getElementById(`prev-logos-${uid}`);
   if (logoPicker) logoPicker.innerHTML = renderLogoPickerHTML(uid, availableLogos);
+
+  // Update price bar
+  const priceEl = document.getElementById('prev-price-' + uid);
+  if (priceEl) priceEl.innerHTML = previewPriceBarHTML(line);
 }
 
 /* ── INIT ── */
