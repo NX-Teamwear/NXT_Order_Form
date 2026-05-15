@@ -1833,6 +1833,7 @@ let previewState = {};
 
 // Uploaded logos for the preview step
 let previewUploadedLogos = [];
+let previewUploadSeq = 0;
 
 function getPreviewState(uid) {
   if (!previewState[uid]) previewState[uid] = { activePos: null, placements: {}, view: 'front' };
@@ -1923,7 +1924,7 @@ function renderPreview() {
   if (!c) return;
   c.innerHTML = '';
 
-  // Logos available to place (uploaded via the preview's "+ Upload logo")
+  // Logos available to place (uploaded via the preview's "+ Upload logos")
   const availableLogos = buildPreviewLogoList();
 
   if (lines.length === 0) return;
@@ -2025,8 +2026,8 @@ function renderPreview() {
         </div>
 
         <label class="upload-logo-btn" style="margin-top:6px;width:fit-content;">
-          + Upload logo
-          <input type="file" accept="image/*" style="display:none" onchange="handlePreviewUpload(${line.uid},this)">
+          + Upload logos
+          <input type="file" accept="image/*" multiple style="display:none" onchange="handlePreviewUpload(${line.uid},this)">
         </label>
       </div>
       <div id="prev-price-${line.uid}">${previewPriceBarHTML(line)}</div>
@@ -2058,11 +2059,11 @@ function renderLogoPickerHTML(uid, logos) {
     html += `<div class="logo-pick-item clear-btn" onclick="clearPreviewLogo(${uid})" title="Remove logo">✕</div>`;
   }
 
-  return html || '<span style="font-size:11px;color:var(--nx-muted);">No logos yet — use the “+ Upload logo” button below to add your artwork.</span>';
+  return html || '<span style="font-size:11px;color:var(--nx-muted);">No logos yet — use the “+ Upload logos” button below to add your artwork. You can select several at once.</span>';
 }
 
 function buildPreviewLogoList() {
-  // All artwork now comes from the preview's "+ Upload logo" control.
+  // All artwork now comes from the preview's "+ Upload logos" control.
   return previewUploadedLogos.slice();
 }
 
@@ -2101,11 +2102,13 @@ function clearPreviewLogo(uid) {
 }
 
 function handlePreviewUpload(uid, input) {
-  if (!input.files[0]) return;
-  const file = input.files[0];
-  const src = URL.createObjectURL(file);
-  const logo = { id: 'prev-upload-' + Date.now(), src, label: file.name, file };
-  previewUploadedLogos.push(logo);
+  const files = Array.from(input.files || []);
+  if (!files.length) return;
+  files.forEach(file => {
+    const src = URL.createObjectURL(file);
+    previewUploadedLogos.push({ id: 'prev-upload-' + (++previewUploadSeq), src, label: file.name, file });
+  });
+  input.value = '';
   renderPreviewCard(uid);
 }
 
