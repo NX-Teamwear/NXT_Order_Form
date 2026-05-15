@@ -709,23 +709,23 @@ textarea { resize: vertical; min-height: 80px; margin-bottom: 0; }
 
 /* ── PRODUCT DATA ── */
 const PRODUCTS = [
-  {code:'JC001',name:'Active Tee',cat:'T-Shirt',age:'Adult',colours:['Arctic White','Bottle Green','Burgundy','Charcoal','Cornflower Blue','Digital Lavender','Earthy Green','Electric Green','Electric Orange','Electric Pink','Electric Yellow','Fire Red','French Navy','Heather Grey','Hot Pink','Jade','Jet Black','Kelly Green','Purple','Royal Blue','Sapphire Blue','Sun Yellow'],rrp:14.99,rrpLarge:18.99,rrpSmall:17.49,rrpBoth:21.49,sizes:['XS','S','M','L','XL','2XL','3XL','4XL']},
-  {code:'SX701',name:'Casual Tee',cat:'T-Shirt',age:'Adult',colours:['Anthracite','Black','Blue Soul','Burgundy','Cotton Pink','French Navy','Heather Grey','Ochre','Pool Blue','Red','Stargazer','White','Worker Blue','Verdant Green','Spectra Yellow'],rrp:14.99,rrpLarge:18.99,rrpSmall:17.49,rrpBoth:21.49,sizes:['XS','S','M','L','XL','2XL','3XL']},
-  {code:'JC01J',name:'Junior Active Tee',cat:'T-Shirt',age:'Junior',colours:['Arctic White','Bottle Green','Burgundy','Charcoal','Cornflower Blue','Digital Lavender','Earthy Green','Electric Green','Electric Orange','Electric Pink','Electric Yellow','Fire Red','French Navy','Heather Grey','Hot Pink','Jade','Jet Black','Kelly Green','Purple','Royal Blue','Sapphire Blue','Sun Yellow'],rrp:12.50,rrpLarge:16.50,rrpSmall:15.00,rrpBoth:19.00,sizes:['3-4','5-6','7-8','9-11','12-13']},
-  {code:'SX702',name:'Junior Casual Tee',cat:'T-Shirt',age:'Junior',colours:['Anthracite','Black','Blue Soul','Burgundy','Cotton Pink','French Navy','Heather Grey','Ochre','Pool Blue','Red','Stargazer','White','Worker Blue','Royal Blue','Viva Yellow'],rrp:12.50,rrpLarge:16.50,rrpSmall:15.00,rrpBoth:19.00,sizes:['3-4','5-6','7-8','9-11','12-13']},
-  {code:'JH001',name:'Casual Hoodie',cat:'Hoodie',age:'Adult',colours:['Arctic White','Ash','Bottle Green','Bright Royal','Burgundy','Charcoal','Desert Sand','Fire Red','Forest Green','Hawaiian Blue','Hot Pink','Jet Black','Kelly Green','New French Navy','Orange Crush','Purple','Sun Yellow'],rrp:29.50,rrpLarge:33.50,rrpSmall:32.00,rrpBoth:36.00,sizes:['XS','S','M','L','XL','2XL','3XL']},
-  {code:'JH006',name:'Active Hoodie',cat:'Hoodie',age:'Adult',colours:['Oxford Navy','Royal Blue','Fire Red','Jet Black'],rrp:29.50,rrpLarge:33.50,rrpSmall:32.00,rrpBoth:36.00,sizes:['XS','S','M','L','XL','2XL','3XL']},
-  {code:'JH01J',name:'Junior Casual Hoodie',cat:'Hoodie',age:'Junior',colours:['Arctic White','Ash','Bottle Green','Bright Royal','Burgundy','Charcoal','Desert Sand','Fire Red','Forest Green','Hawaiian Blue','Hot Pink','Jet Black','Kelly Green','New French Navy','Orange Crush','Purple','Sun Yellow'],rrp:24.50,rrpLarge:28.50,rrpSmall:27.00,rrpBoth:31.00,sizes:['3-4','5-6','7-8','9-11','12-13']},
-  {code:'JH06J',name:'Junior Active Hoodie',cat:'Hoodie',age:'Junior',colours:['Oxford Navy','Royal Blue','Jet Black'],rrp:24.50,rrpLarge:28.50,rrpSmall:27.00,rrpBoth:31.00,sizes:['3-4','5-6','7-8','9-11','12-13']},
-  {code:'JH030',name:'Casual Sweater',cat:'Sweatshirt',age:'Adult',colours:['Arctic White','Bottle Green','Burgundy','Charcoal','Fire Red','Heather Grey','Hot Pink','Jet Black','Kelly Green','New French Navy','Purple','Royal Blue','Sky Blue','Sun Yellow'],rrp:24.99,rrpLarge:28.99,rrpSmall:27.49,rrpBoth:31.49,sizes:['XS','S','M','L','XL','2XL','3XL']},
-  {code:'JH30J',name:'Junior Casual Sweater',cat:'Sweatshirt',age:'Junior',colours:['Arctic White','Bottle Green','Burgundy','Charcoal','Fire Red','Heather Grey','Hot Pink','Jet Black','Kelly Green','New French Navy','Purple','Royal Blue','Sky Blue','Sun Yellow'],rrp:20.50,rrpLarge:24.50,rrpSmall:23.00,rrpBoth:27.00,sizes:['3-4','5-6','7-8','9-11','12-13']},
-  {code:'AQ015',name:'Casual Polo',cat:'Polo',age:'Adult',colours:['Black','Bottle','Burgundy','Charcoal','Cornflower','Heather Grey','Kelly','Navy','Orange','Purple','Red','Royal','Sunflower','White'],rrp:18.99,rrpLarge:22.99,rrpSmall:21.49,rrpBoth:25.49,sizes:['XS','S','M','L','XL','2XL','3XL','4XL']},
-  {code:'JC040',name:'Active Polo',cat:'Polo',age:'Adult',colours:['Arctic White','Bottle Green','Burgundy','Fire Red','French Navy','Hot Pink','Jet Black','Lime Green','Purple','Royal Blue','Sapphire Blue','Sun Yellow'],rrp:16.50,rrpLarge:20.50,rrpSmall:19.00,rrpBoth:23.00,sizes:['XS','S','M','L','XL','2XL','3XL']},
-  {code:'JC40J',name:'Junior Active Polo',cat:'Polo',age:'Junior',colours:['Arctic White','Bottle Green','Burgundy','Fire Red','French Navy','Hot Pink','Jet Black','Lime Green','Purple','Royal Blue','Sapphire Blue','Sun Yellow'],rrp:13.50,rrpLarge:17.50,rrpSmall:16.00,rrpBoth:20.00,sizes:['3-4','5-6','7-8','9-11','12-13']},
-  {code:'BC015',name:'Basic Cap',cat:'Headwear',age:'Adult',colours:['Black','Bottle Green','Bright Royal','Burgundy','French Navy','Olive Green','Red','White'],rrp:13.99,rrpLarge:17.99,rrpSmall:16.49,rrpBoth:20.49,sizes:['One Size']},
-  {code:'BC446',name:'Circular Patch Beanie',cat:'Headwear',age:'Adult',colours:['Bottle Green','Bright Royal','Burgundy','French Navy','Graphite Grey','Red','White'],rrp:10.99,rrpLarge:14.99,rrpSmall:13.49,rrpBoth:17.49,sizes:['One Size']},
-  {code:'YP004',name:'Flexfit Cap',cat:'Headwear',age:'Adult',colours:['Black','Dark Navy','Dark Pink','Gold','Maroon','Orange','Pepper Green','Purple','Red','Royal','Spruce'],rrp:22.99,rrpLarge:26.99,rrpSmall:25.49,rrpBoth:29.49,sizes:['S/M','L/XL']},
-  {code:'BG212',name:'Universal Backpack',cat:'Bags',age:'Adult',colours:['Black','Bright Royal','Classic Red','French Navy'],rrp:27.99,rrpLarge:31.99,rrpSmall:30.49,rrpBoth:34.49,sizes:['One Size']}
+  {code:'JC001',name:'Active Tee',cat:'T-Shirt',age:'Adult',colours:['Arctic White','Bottle Green','Burgundy','Charcoal','Cornflower Blue','Digital Lavender','Earthy Green','Electric Green','Electric Orange','Electric Pink','Electric Yellow','Fire Red','French Navy','Heather Grey','Hot Pink','Jade','Jet Black','Kelly Green','Purple','Royal Blue','Sapphire Blue','Sun Yellow'],rrp:14.99,sizes:['XS','S','M','L','XL','2XL','3XL','4XL']},
+  {code:'SX701',name:'Casual Tee',cat:'T-Shirt',age:'Adult',colours:['Anthracite','Black','Blue Soul','Burgundy','Cotton Pink','French Navy','Heather Grey','Ochre','Pool Blue','Red','Stargazer','White','Worker Blue','Verdant Green','Spectra Yellow'],rrp:14.99,sizes:['XS','S','M','L','XL','2XL','3XL']},
+  {code:'JC01J',name:'Junior Active Tee',cat:'T-Shirt',age:'Junior',colours:['Arctic White','Bottle Green','Burgundy','Charcoal','Cornflower Blue','Digital Lavender','Earthy Green','Electric Green','Electric Orange','Electric Pink','Electric Yellow','Fire Red','French Navy','Heather Grey','Hot Pink','Jade','Jet Black','Kelly Green','Purple','Royal Blue','Sapphire Blue','Sun Yellow'],rrp:12.50,sizes:['3-4','5-6','7-8','9-11','12-13']},
+  {code:'SX702',name:'Junior Casual Tee',cat:'T-Shirt',age:'Junior',colours:['Anthracite','Black','Blue Soul','Burgundy','Cotton Pink','French Navy','Heather Grey','Ochre','Pool Blue','Red','Stargazer','White','Worker Blue','Royal Blue','Viva Yellow'],rrp:12.50,sizes:['3-4','5-6','7-8','9-11','12-13']},
+  {code:'JH001',name:'Casual Hoodie',cat:'Hoodie',age:'Adult',colours:['Arctic White','Ash','Bottle Green','Bright Royal','Burgundy','Charcoal','Desert Sand','Fire Red','Forest Green','Hawaiian Blue','Hot Pink','Jet Black','Kelly Green','New French Navy','Orange Crush','Purple','Sun Yellow'],rrp:29.50,sizes:['XS','S','M','L','XL','2XL','3XL']},
+  {code:'JH006',name:'Active Hoodie',cat:'Hoodie',age:'Adult',colours:['Oxford Navy','Royal Blue','Fire Red','Jet Black'],rrp:29.50,sizes:['XS','S','M','L','XL','2XL','3XL']},
+  {code:'JH01J',name:'Junior Casual Hoodie',cat:'Hoodie',age:'Junior',colours:['Arctic White','Ash','Bottle Green','Bright Royal','Burgundy','Charcoal','Desert Sand','Fire Red','Forest Green','Hawaiian Blue','Hot Pink','Jet Black','Kelly Green','New French Navy','Orange Crush','Purple','Sun Yellow'],rrp:24.50,sizes:['3-4','5-6','7-8','9-11','12-13']},
+  {code:'JH06J',name:'Junior Active Hoodie',cat:'Hoodie',age:'Junior',colours:['Oxford Navy','Royal Blue','Jet Black'],rrp:24.50,sizes:['3-4','5-6','7-8','9-11','12-13']},
+  {code:'JH030',name:'Casual Sweater',cat:'Sweatshirt',age:'Adult',colours:['Arctic White','Bottle Green','Burgundy','Charcoal','Fire Red','Heather Grey','Hot Pink','Jet Black','Kelly Green','New French Navy','Purple','Royal Blue','Sky Blue','Sun Yellow'],rrp:24.99,sizes:['XS','S','M','L','XL','2XL','3XL']},
+  {code:'JH30J',name:'Junior Casual Sweater',cat:'Sweatshirt',age:'Junior',colours:['Arctic White','Bottle Green','Burgundy','Charcoal','Fire Red','Heather Grey','Hot Pink','Jet Black','Kelly Green','New French Navy','Purple','Royal Blue','Sky Blue','Sun Yellow'],rrp:20.50,sizes:['3-4','5-6','7-8','9-11','12-13']},
+  {code:'AQ015',name:'Casual Polo',cat:'Polo',age:'Adult',colours:['Black','Bottle','Burgundy','Charcoal','Cornflower','Heather Grey','Kelly','Navy','Orange','Purple','Red','Royal','Sunflower','White'],rrp:18.99,sizes:['XS','S','M','L','XL','2XL','3XL','4XL']},
+  {code:'JC040',name:'Active Polo',cat:'Polo',age:'Adult',colours:['Arctic White','Bottle Green','Burgundy','Fire Red','French Navy','Hot Pink','Jet Black','Lime Green','Purple','Royal Blue','Sapphire Blue','Sun Yellow'],rrp:16.50,sizes:['XS','S','M','L','XL','2XL','3XL']},
+  {code:'JC40J',name:'Junior Active Polo',cat:'Polo',age:'Junior',colours:['Arctic White','Bottle Green','Burgundy','Fire Red','French Navy','Hot Pink','Jet Black','Lime Green','Purple','Royal Blue','Sapphire Blue','Sun Yellow'],rrp:13.50,sizes:['3-4','5-6','7-8','9-11','12-13']},
+  {code:'BC015',name:'Basic Cap',cat:'Headwear',age:'Adult',colours:['Black','Bottle Green','Bright Royal','Burgundy','French Navy','Olive Green','Red','White'],rrp:13.99,sizes:['One Size']},
+  {code:'BC446',name:'Circular Patch Beanie',cat:'Headwear',age:'Adult',colours:['Bottle Green','Bright Royal','Burgundy','French Navy','Graphite Grey','Red','White'],rrp:10.99,sizes:['One Size']},
+  {code:'YP004',name:'Flexfit Cap',cat:'Headwear',age:'Adult',colours:['Black','Dark Navy','Dark Pink','Gold','Maroon','Orange','Pepper Green','Purple','Red','Royal','Spruce'],rrp:22.99,sizes:['S/M','L/XL']},
+  {code:'BG212',name:'Universal Backpack',cat:'Bags',age:'Adult',colours:['Black','Bright Royal','Classic Red','French Navy'],rrp:27.99,sizes:['One Size']}
 ];
 
 const PRODUCT_IMAGES = {
@@ -995,19 +995,30 @@ function newLine(code) {
 }
 function getLine(u) { return lines.find(l => l.uid === u); }
 
-/* ── PRICING ── */
-function priceTier(positions) {
-  const hasL = positions.some(p => LARGE_POS_KEYS.includes(p));
-  const hasS = positions.some(p => SMALL_POS_KEYS.includes(p));
-  if (hasL && hasS) return 'both';
-  if (hasL)         return 'large';
-  if (hasS)         return 'small';
-  return 'base';
+/* ── PRICING ──
+   Base = product rrp and includes the free base logo (Left Breast /
+   Front Panel). The first small logo is then included free; each
+   further small logo adds SMALL_LOGO_FEE; every large logo adds
+   LARGE_LOGO_FEE. Counts are per product line. */
+const SMALL_LOGO_FEE   = 2.50;  // per small logo beyond the first
+const LARGE_LOGO_FEE   = 4.00;  // per large logo
+const FREE_SMALL_LOGOS = 1;     // small logos included in the base price
+
+function logoCounts(line) {
+  let small = 0, large = 0;
+  (line.positions || []).forEach(k => {
+    if (SMALL_POS_KEYS.includes(k))      small++;
+    else if (LARGE_POS_KEYS.includes(k)) large++;
+  });
+  return { small, large };
+}
+function logoSupplement(line) {
+  const { small, large } = logoCounts(line);
+  return Math.max(0, small - FREE_SMALL_LOGOS) * SMALL_LOGO_FEE + large * LARGE_LOGO_FEE;
 }
 function linePrice(line) {
   const p = PRODUCTS.find(x => x.code === line.code);
-  const t = priceTier(line.positions);
-  return t==='both' ? p.rrpBoth : t==='large' ? p.rrpLarge : t==='small' ? p.rrpSmall : p.rrp;
+  return p.rrp + logoSupplement(line);
 }
 
 /* ── HELPERS ── */
@@ -1450,7 +1461,7 @@ function buildPayload() {
     order_lines: lines.map((line, idx) => {
       const p    = PRODUCTS.find(x => x.code === line.code);
       const price = linePrice(line);
-      const tier  = priceTier(line.positions);
+      const lc    = logoCounts(line);
       const dups  = lines.filter(l => l.code === line.code);
       const di    = dups.indexOf(line) + 1;
       const totalQty = Object.values(line.sizes).reduce((a,b)=>(a+(parseInt(b)||0)),0);
@@ -1464,8 +1475,11 @@ function buildPayload() {
         age_group:     p.age,
         design_number: dups.length > 1 ? di : null,
         colour:        line.colour,
-        price_per_item: price.toFixed(2),
-        price_tier:    tier,
+        price_per_item:  price.toFixed(2),
+        base_price:      p.rrp.toFixed(2),
+        small_logos:     lc.small,
+        large_logos:     lc.large,
+        logo_supplement: logoSupplement(line).toFixed(2),
         logo_positions: bd.length ? bd.map(d => d.position).join(', ') : '—',
         logo_details:  bd.map(d => ({
           position:  d.position,
@@ -1516,6 +1530,8 @@ function buildEmailSummary() {
     const di    = dups.indexOf(line) + 1;
     s += `\nLine ${i+1}: ${p.name}${dups.length>1?' — Design '+di:''}\n`;
     s += `  Code: ${p.code} | Colour: ${line.colour} | £${price.toFixed(2)}/item\n`;
+    const lc = logoCounts(line); const sup = logoSupplement(line);
+    s += `  Pricing: base £${p.rrp.toFixed(2)}${sup > 0 ? ` + logo supplement £${sup.toFixed(2)}` : ''} (small ${lc.small}, large ${lc.large}; first small free)\n`;
     const szs = Object.entries(line.sizes).filter(([,v])=>v>0);
     if (szs.length) s += `  Sizes: ${szs.map(([sz,q])=>`${sz}×${q}`).join(', ')}\n`;
     const bd = lineBrandingDetails(line);
@@ -1935,13 +1951,15 @@ function lineBrandingDetails(line) {
 // Price summary bar shown inside each preview card.
 function previewPriceBarHTML(line) {
   const p     = PRODUCTS.find(x => x.code === line.code);
-  const tier  = priceTier(line.positions);
+  const { small, large } = logoCounts(line);
   const price = linePrice(line);
-  const tiers = [
-    {id:'base',  label:`£${p.rrp.toFixed(2)} — left breast only`},
-    {id:'small', label:`£${p.rrpSmall.toFixed(2)} — + small logo`},
-    {id:'large', label:`£${p.rrpLarge.toFixed(2)} — + large logo`},
-    {id:'both',  label:`£${p.rrpBoth.toFixed(2)} — + both types`}
+  const chargedSmall = Math.max(0, small - FREE_SMALL_LOGOS);
+  const smallFee = chargedSmall * SMALL_LOGO_FEE;
+  const largeFee = large * LARGE_LOGO_FEE;
+  const chips = [
+    `<div class="ptier on">Base £${p.rrp.toFixed(2)}</div>`,
+    `<div class="ptier${small ? ' on' : ''}">Small ×${small} · 1st free${chargedSmall ? ` · +£${smallFee.toFixed(2)}` : ''}</div>`,
+    `<div class="ptier${large ? ' on' : ''}">Large ×${large}${large ? ` · +£${largeFee.toFixed(2)}` : ''}</div>`
   ];
   return `
     <div class="price-bar" style="margin:0 14px 12px;">
@@ -1949,7 +1967,7 @@ function previewPriceBarHTML(line) {
         <div class="price-bar-lbl">Price per item — current selection</div>
         <div class="price-bar-val">£${price.toFixed(2)}</div>
       </div>
-      <div class="price-tiers">${tiers.map(t=>`<div class="ptier${tier===t.id?' on':''}">${t.label}</div>`).join('')}</div>
+      <div class="price-tiers">${chips.join('')}</div>
     </div>`;
 }
 
