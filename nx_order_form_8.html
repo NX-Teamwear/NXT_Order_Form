@@ -475,11 +475,16 @@ textarea { resize: vertical; min-height: 80px; margin-bottom: 0; }
 .preview-card-sub { font-size: 11px; color: var(--nx-muted); margin-top: 2px; }
 
 .preview-canvas-wrap { position: relative; background: #f5f5f0; display: flex; align-items: center; justify-content: center; min-height: 220px; padding: 16px; }
+.preview-img-box { position: relative; display: inline-block; line-height: 0; }
 .preview-garment-img { max-height: 200px; max-width: 100%; object-fit: contain; display: block; pointer-events: none; user-select: none; }
+
+.pv-viewtog { display: inline-flex; border: 0.5px solid var(--nx-border2); border-radius: 5px; overflow: hidden; }
+.pv-vbtn { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; padding: 4px 11px; border: none; background: transparent; color: var(--nx-muted); cursor: pointer; font-family: "Barlow", sans-serif; transition: all .15s; }
+.pv-vbtn.on { background: var(--nx-blue-dim); color: var(--nx-blue); }
 
 .pos-marker {
   position: absolute;
-  width: 36px; height: 36px;
+  box-sizing: border-box;
   border-radius: 50%;
   border: 2px solid;
   display: flex; align-items: center; justify-content: center;
@@ -1759,45 +1764,245 @@ function stepNavClick(n) {
    so they scale with the container.
 ════════════════════════════════════════════════ */
 
-const POS_TEMPLATES = {
-  tshirt: [
-    { id:'left_breast',  label:'Left Breast',   top:'34%', left:'37%' },
-    { id:'right_breast', label:'Right Breast',  top:'34%', left:'63%' },
-    { id:'front_centre', label:'Front Centre',  top:'43%', left:'50%' },
-    { id:'back_centre',  label:'Back Centre',   top:'38%', left:'50%' },
-  ],
-  hoodie: [
-    { id:'left_breast',  label:'Left Breast',   top:'37%', left:'38%' },
-    { id:'right_breast', label:'Right Breast',  top:'37%', left:'62%' },
-    { id:'front_centre', label:'Front Centre',  top:'47%', left:'50%' },
-    { id:'back_centre',  label:'Back Centre',   top:'37%', left:'50%' },
-  ],
-  polo: [
-    { id:'left_breast',  label:'Left Breast',   top:'32%', left:'37%' },
-    { id:'right_breast', label:'Right Breast',  top:'32%', left:'63%' },
-    { id:'front_centre', label:'Front Centre',  top:'42%', left:'50%' },
-  ],
-  cap: [
-    { id:'front_centre', label:'Front Panel',   top:'45%', left:'50%' },
-    { id:'side_left',    label:'Side',           top:'48%', left:'22%' },
-  ],
-  beanie: [
-    { id:'front_centre', label:'Front',          top:'55%', left:'50%' },
-  ],
-  bag: [
-    { id:'front_centre', label:'Front',          top:'40%', left:'50%' },
-  ],
+// Calibrated logo positions per product, exported from nxt_calibrator.html
+// (source of truth: logo_positioning.json). top/left are % of the garment
+// image box; size is the calibrator's logo-circle pixel diameter.
+const PRODUCT_POSITIONS = {
+  "JC001": {
+    "front": [
+      {id:"rightbreast",label:"RightBreast",top:"31.4%",left:"34.1%",size:84},
+      {id:"leftbreast",label:"LeftBreast",top:"31.4%",left:"54.9%",size:84},
+      {id:"centrechest_",label:"CentreChest ",top:"48.8%",left:"44.7%",size:140},
+      {id:"leftsleeve_",label:"LeftSleeve ",top:"35.0%",left:"80.6%",size:90},
+      {id:"rightsleeve",label:"RightSleeve",top:"34.9%",left:"17.0%",size:90}
+    ],
+    "back": [
+      {id:"pos_2",label:"Back Centre",top:"79.7%",left:"15.1%",size:56},
+      {id:"tail",label:"Tail",top:"83.6%",left:"50.1%",size:140},
+      {id:"shoulders",label:"Shoulders",top:"18.3%",left:"50.0%",size:140},
+      {id:"uppermidbacknotshoulders",label:"UpperMidBackNOTSHOULDERS",top:"35.3%",left:"50.0%",size:140}
+    ]
+  },
+  "SX701": {
+    "front": [
+      {id:"leftbreast",label:"LeftBreast",top:"34.4%",left:"64.6%",size:80},
+      {id:"rightbreast",label:"RightBreast",top:"34.5%",left:"36.9%",size:80},
+      {id:"leftsleeve",label:"LeftSleeve",top:"35.8%",left:"89.1%",size:80},
+      {id:"rightsleeve",label:"RightSleeve",top:"35.6%",left:"11.0%",size:80},
+      {id:"centrechest",label:"CentreChest",top:"50.3%",left:"50.0%",size:140}
+    ],
+    "back": [
+      {id:"shoulders",label:"Shoulders",top:"26.6%",left:"50.0%",size:120},
+      {id:"uppermidbacknotshoulders",label:"UpperMidBackNOTSHOULDERS",top:"41.7%",left:"50.0%",size:120},
+      {id:"tail",label:"Tail",top:"74.5%",left:"50.0%",size:120}
+    ]
+  },
+  "JC01J": {
+    "front": [
+      {id:"rightbreast",label:"RightBreast",top:"27.8%",left:"35.7%",size:86},
+      {id:"leftbreast",label:"LeftBreast",top:"27.9%",left:"58.3%",size:86},
+      {id:"rightsleeve",label:"RightSleeve",top:"30.5%",left:"20.4%",size:86},
+      {id:"leftsleeve",label:"LeftSleeve",top:"29.7%",left:"82.2%",size:86},
+      {id:"centrechest",label:"CentreChest",top:"46.9%",left:"47.1%",size:140}
+    ],
+    "back": [
+      {id:"shoulders",label:"Shoulders",top:"18.5%",left:"50.0%",size:140},
+      {id:"uppermidbacknotshoulders_",label:"UpperMidBackNOTSHOULDERS ",top:"36.2%",left:"50.0%",size:140},
+      {id:"tail",label:"Tail",top:"82.9%",left:"50.1%",size:140}
+    ]
+  },
+  "SX702": {
+    "front": [
+      {id:"leftbreast",label:"LeftBreast",top:"35.0%",left:"63.8%",size:86},
+      {id:"rightbreast",label:"RightBreast",top:"35.0%",left:"35.3%",size:86},
+      {id:"centrechest",label:"CentreChest",top:"50.4%",left:"49.9%",size:140},
+      {id:"leftsleeve",label:"LeftSleeve",top:"29.2%",left:"88.7%",size:74},
+      {id:"rightsleeve",label:"RightSleeve",top:"29.3%",left:"11.6%",size:74}
+    ],
+    "back": [
+      {id:"shoulders",label:"Shoulders",top:"27.6%",left:"50.0%",size:110},
+      {id:"uppermidbacknotshoulders_",label:"UpperMidBackNOTSHOULDERS ",top:"41.5%",left:"50.0%",size:110},
+      {id:"tail",label:"Tail",top:"74.0%",left:"50.0%",size:110}
+    ]
+  },
+  "JH001": {
+    "front": [
+      {id:"leftbreast",label:"LeftBreast",top:"33.5%",left:"60.6%",size:86},
+      {id:"rightbreast",label:"RightBreast",top:"33.5%",left:"35.8%",size:86},
+      {id:"leftsleeve",label:"LeftSleeve",top:"40.0%",left:"82.0%",size:88},
+      {id:"rightsleeve",label:"RightSleeve",top:"40.0%",left:"18.3%",size:88},
+      {id:"centrechest",label:"CentreChest",top:"48.5%",left:"48.3%",size:140}
+    ],
+    "back": [
+      {id:"shoulders",label:"Shoulders",top:"27.3%",left:"50.0%",size:130},
+      {id:"uppermidbacknotshoulders_",label:"UpperMidBackNOTSHOULDERS ",top:"43.5%",left:"50.0%",size:130},
+      {id:"tail",label:"Tail",top:"79.7%",left:"50.0%",size:130}
+    ]
+  },
+  "JH006": {
+    "front": [
+      {id:"leftbreast",label:"LeftBreast",top:"33.4%",left:"61.8%",size:78},
+      {id:"rightbreast",label:"RightBreast",top:"33.3%",left:"38.1%",size:78},
+      {id:"centrechest",label:"CentreChest",top:"47.6%",left:"50.0%",size:140},
+      {id:"leftsleeve",label:"LeftSleeve",top:"38.0%",left:"82.0%",size:76},
+      {id:"rightsleeve",label:"RightSleeve",top:"38.0%",left:"18.3%",size:76}
+    ],
+    "back": [
+      {id:"shoulder",label:"Shoulder",top:"26.7%",left:"50.0%",size:120},
+      {id:"uppermidbacknotshoulders",label:"UpperMidBackNOTSHOULDERS",top:"41.7%",left:"50.0%",size:120},
+      {id:"tail",label:"Tail",top:"78.1%",left:"50.0%",size:120}
+    ]
+  },
+  "JH01J": {
+    "front": [
+      {id:"leftbreast",label:"LeftBreast",top:"35.5%",left:"61.3%",size:86},
+      {id:"rightbreast",label:"RightBreast",top:"35.5%",left:"38.8%",size:86},
+      {id:"leftsleeve",label:"LeftSleeve",top:"40.0%",left:"80.9%",size:80},
+      {id:"rightsleeve",label:"RightSleeve",top:"40.0%",left:"19.5%",size:80},
+      {id:"centrechest",label:"CentreChest",top:"51.2%",left:"49.9%",size:140}
+    ],
+    "back": [
+      {id:"shoulders",label:"Shoulders",top:"26.7%",left:"50.0%",size:126},
+      {id:"uppermidbacknotshoulders_",label:"UpperMidBackNOTSHOULDERS ",top:"42.5%",left:"50.1%",size:128},
+      {id:"tail",label:"Tail",top:"76.9%",left:"50.0%",size:128}
+    ]
+  },
+  "JH06J": {
+    "front": [
+      {id:"leftbreast",label:"LeftBreast",top:"31.2%",left:"66.6%",size:84},
+      {id:"rightbreast",label:"RightBreast",top:"31.2%",left:"34.8%",size:84},
+      {id:"leftsleeve",label:"LeftSleeve",top:"41.2%",left:"91.6%",size:82},
+      {id:"rightsleeve",label:"RightSleeve",top:"39.9%",left:"8.5%",size:82},
+      {id:"centrechest",label:"CentreChest",top:"46.7%",left:"50.5%",size:140}
+    ],
+    "back": []
+  },
+  "JH030": {
+    "front": [
+      {id:"leftbreast",label:"LeftBreast",top:"27.5%",left:"62.9%",size:94},
+      {id:"rightbreast",label:"RightBreast",top:"27.5%",left:"35.5%",size:94},
+      {id:"leftsleeve",label:"LeftSleeve",top:"34.5%",left:"84.4%",size:86},
+      {id:"rightsleeve",label:"RightSleeve",top:"34.5%",left:"16.0%",size:86},
+      {id:"centrechest",label:"CentreChest",top:"43.4%",left:"49.1%",size:140}
+    ],
+    "back": [
+      {id:"shoulders",label:"Shoulders",top:"17.5%",left:"50.0%",size:140},
+      {id:"uppermidbacknotshoulders_",label:"UpperMidBackNOTSHOULDERS ",top:"35.5%",left:"50.0%",size:140},
+      {id:"tail",label:"Tail",top:"76.4%",left:"50.0%",size:140}
+    ]
+  },
+  "JH30J": {
+    "front": [
+      {id:"leftbreast",label:"LeftBreast",top:"23.1%",left:"60.4%",size:86},
+      {id:"rightbreast",label:"RightBreast",top:"23.1%",left:"37.3%",size:86},
+      {id:"leftsleeve",label:"LeftSleeve",top:"30.4%",left:"85.0%",size:82},
+      {id:"rightsleeve",label:"RightSleeve",top:"30.4%",left:"15.7%",size:82},
+      {id:"centrechest",label:"CentreChest",top:"39.2%",left:"48.8%",size:140}
+    ],
+    "back": []
+  },
+  "AQ015": {
+    "front": [
+      {id:"leftbreast",label:"LeftBreast",top:"27.5%",left:"66.7%",size:88},
+      {id:"rightbreast",label:"RightBreast",top:"27.5%",left:"33.6%",size:88},
+      {id:"leftsleeve",label:"LeftSleeve",top:"29.4%",left:"93.5%",size:80},
+      {id:"rightsleeve",label:"RightSleeve",top:"29.5%",left:"6.5%",size:80},
+      {id:"centrechest",label:"CentreChest",top:"44.3%",left:"50.2%",size:140}
+    ],
+    "back": [
+      {id:"shoulders",label:"Shoulders",top:"16.7%",left:"50.0%",size:136},
+      {id:"uppermidbacknotshoulders_",label:"UpperMidBackNOTSHOULDERS ",top:"33.9%",left:"50.0%",size:136},
+      {id:"tail",label:"Tail",top:"85.3%",left:"49.9%",size:136}
+    ]
+  },
+  "JC040": {
+    "front": [
+      {id:"leftbreast",label:"LeftBreast",top:"29.3%",left:"55.3%",size:74},
+      {id:"rightbreast",label:"RightBreast",top:"29.3%",left:"32.9%",size:74},
+      {id:"leftsleeve",label:"LeftSleeve",top:"34.6%",left:"80.7%",size:78},
+      {id:"rightsleeve",label:"RightSleeve",top:"34.3%",left:"18.7%",size:78},
+      {id:"centrechest",label:"CentreChest",top:"44.6%",left:"42.7%",size:140}
+    ],
+    "back": [
+      {id:"shoulder",label:"Shoulder",top:"19.0%",left:"50.3%",size:130},
+      {id:"uppermidbacknotshoulders",label:"UpperMidBackNOTSHOULDERS",top:"35.4%",left:"50.3%",size:130},
+      {id:"tail",label:"Tail",top:"82.7%",left:"49.2%",size:130}
+    ]
+  },
+  "JC40J": {
+    "front": [
+      {id:"leftbreast",label:"LeftBreast",top:"26.4%",left:"55.3%",size:70},
+      {id:"rightbreast",label:"RightBreast",top:"26.4%",left:"37.0%",size:70},
+      {id:"centrechest",label:"CentreChest",top:"41.2%",left:"45.9%",size:140}
+    ],
+    "back": []
+  },
+  "BC015": {
+    "front": [
+      {id:"frontpanel",label:"FrontPanel",top:"36.9%",left:"61.4%",size:140}
+    ],
+    "back": []
+  },
+  "YP004": {
+    "front": [
+      {id:"frontpanel",label:"FrontPanel",top:"40.7%",left:"37.5%",size:140}
+    ],
+    "back": []
+  },
+  "BC446": {
+    "front": [
+      {id:"frontpanel",label:"FrontPanel",top:"70.1%",left:"75.3%",size:140}
+    ],
+    "back": []
+  },
+  "BG212": {
+    "front": [
+      {id:"frontpanel",label:"FrontPanel",top:"58.7%",left:"35.8%",size:108}
+    ],
+    "back": []
+  }
 };
 
-const PRODUCT_TEMPLATE = {
-  JC001:'tshirt', SX701:'tshirt', JC01J:'tshirt', SX702:'tshirt',
-  JH001:'hoodie', JH006:'hoodie', JH01J:'hoodie', JH06J:'hoodie',
-  JH030:'hoodie', JH30J:'hoodie',
-  AQ015:'polo',   JC040:'polo',   JC40J:'polo',
-  BC015:'cap',    YP004:'cap',
-  BC446:'beanie',
-  BG212:'bag',
+// The calibrator sizes logo circles in px against a near-fullscreen image
+// (max-height: calc(100vh - 52px)); this preview image is much smaller, so a
+// raw px size is meaningless here. We treat `size` as a fraction of the
+// garment-image height: markerHeight = size / CAL_REF of the image box.
+// CAL_REF ≈ the calibrator's rendered image height; it is the single global
+// scale knob — relative sizes between positions are faithful regardless.
+const CAL_REF = 760;
+
+// Calibrator labels are raw/inconsistent and shown to customers. Map them to
+// clean display labels; ids are unchanged so placement keys stay stable.
+const LABEL_MAP = {
+  leftbreast: 'Left Breast',
+  rightbreast: 'Right Breast',
+  centrechest: 'Centre Chest',
+  leftsleeve: 'Left Sleeve',
+  rightsleeve: 'Right Sleeve',
+  backcentre: 'Back Centre',
+  shoulders: 'Shoulders',
+  shoulder: 'Shoulders',
+  uppermidbacknotshoulders: 'Upper Back',
+  tail: 'Tail',
+  frontpanel: 'Front Panel',
 };
+
+function prettyLabel(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  const key = s.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  if (LABEL_MAP[key]) return LABEL_MAP[key];
+  return s
+    .replace(/_+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, c => c.toUpperCase()) || 'Position';
+}
+
+function markerStyle(pos) {
+  const pct = ((pos.size || 56) / CAL_REF * 100).toFixed(2);
+  return `top:${pos.top};left:${pos.left};height:${pct}%;width:auto;aspect-ratio:1;`;
+}
 
 // Per-line preview state: { [uid]: { activePos: posId, placements: { posId: logoObj } } }
 let previewState = {};
@@ -1806,13 +2011,14 @@ let previewState = {};
 let previewUploadedLogos = [];
 
 function getPreviewState(uid) {
-  if (!previewState[uid]) previewState[uid] = { activePos: null, placements: {} };
+  if (!previewState[uid]) previewState[uid] = { activePos: null, placements: {}, view: 'front' };
   return previewState[uid];
 }
 
-function getPositions(code) {
-  const tmpl = PRODUCT_TEMPLATE[code];
-  return tmpl ? POS_TEMPLATES[tmpl] : POS_TEMPLATES['tshirt'];
+function getPositions(code, view) {
+  view = view || 'front';
+  const p = PRODUCT_POSITIONS[code];
+  return (p && p[view]) ? p[view] : [];
 }
 
 function renderPreview() {
@@ -1845,14 +2051,17 @@ function renderPreview() {
     const di = dups.indexOf(line) + 1;
     const showDup = dups.length > 1;
 
-    const positions = getPositions(line.code);
     const ps = getPreviewState(line.uid);
-    if (!ps.activePos && positions.length > 0) ps.activePos = positions[0].id;
+    const view = ps.view || 'front';
+    const positions = getPositions(line.code, view);
+    if (positions.length > 0 && !positions.some(pp => pp.id === ps.activePos)) ps.activePos = positions[0].id;
 
     // Get image for current colour
     const imgs = PRODUCT_IMAGES[line.code];
     const colourImgs = imgs ? (imgs[line.colour] || Object.values(imgs)[0]) : null;
-    const imgSrc = colourImgs ? colourImgs.front : '';
+    const imgSrc = colourImgs ? (view === 'back' ? colourImgs.back : colourImgs.front) : '';
+    const backPos = PRODUCT_POSITIONS[line.code] && PRODUCT_POSITIONS[line.code].back;
+    const hasBack = !!(colourImgs && colourImgs.back) && Array.isArray(backPos) && backPos.length > 0;
 
     const card = document.createElement('div');
     card.className = 'preview-card';
@@ -1864,24 +2073,33 @@ function renderPreview() {
           <div class="preview-card-title">${p.name}${showDup ? ' — Design ' + di : ''}</div>
           <div class="preview-card-sub">${line.colour} · ${line.code}</div>
         </div>
-        <span style="font-size:11px;color:var(--nx-muted);">${positions.length} position${positions.length !== 1 ? 's' : ''}</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          ${hasBack ? `<div class="pv-viewtog" id="prev-viewtog-${line.uid}">
+            <button class="pv-vbtn ${view === 'front' ? 'on' : ''}" onclick="togglePreviewView(${line.uid},'front')">Front</button>
+            <button class="pv-vbtn ${view === 'back' ? 'on' : ''}" onclick="togglePreviewView(${line.uid},'back')">Back</button>
+          </div>` : ''}
+          <span style="font-size:11px;color:var(--nx-muted);">${positions.length} position${positions.length !== 1 ? 's' : ''}</span>
+        </div>
       </div>
 
       <div class="preview-canvas-wrap" id="prev-canvas-${line.uid}">
-        ${imgSrc ? `<img class="preview-garment-img" src="${imgSrc}" alt="${p.name}" onerror="this.style.display='none'">` : '<div style="color:var(--nx-muted2);font-size:12px;">Image loading…</div>'}
+        <div class="preview-img-box" id="prev-imgbox-${line.uid}">
+        ${imgSrc ? `<img class="preview-garment-img" id="prev-img-${line.uid}" src="${imgSrc}" alt="${p.name}" onerror="this.style.display='none'">` : '<div style="color:var(--nx-muted2);font-size:12px;">Image loading…</div>'}
         ${positions.map(pos => {
           const placement = ps.placements[pos.id];
           const isActive = ps.activePos === pos.id;
+          const plabel = prettyLabel(pos.label);
           return `<div
             class="pos-marker ${placement ? 'filled' : 'empty'} ${isActive ? 'active-slot' : ''}"
-            style="top:${pos.top};left:${pos.left};"
+            style="${markerStyle(pos)}"
             onclick="selectPreviewPos(${line.uid},'${pos.id}')"
-            title="${pos.label}"
+            title="${plabel}"
           >${placement
             ? `<img src="${placement.src}" alt="">`
-            : `<span style="font-size:9px;line-height:1;text-align:center;">${pos.label.split(' ').map(w=>w[0]).join('')}</span>`
+            : `<span style="font-size:9px;line-height:1;text-align:center;">${plabel.split(' ').map(w=>w[0]).join('')}</span>`
           }</div>`;
         }).join('')}
+        </div>
       </div>
 
       <div class="preview-sidebar">
@@ -1893,7 +2111,7 @@ function renderPreview() {
             return `<button
               class="preview-pos-btn ${placement ? 'filled-pos' : 'empty-pos'} ${isActive ? 'active-pos' : ''}"
               onclick="selectPreviewPos(${line.uid},'${pos.id}')"
-            >${pos.label}${placement ? ' ✓' : ''}</button>`;
+            >${prettyLabel(pos.label)}${placement ? ' ✓' : ''}</button>`;
           }).join('')}
         </div>
 
@@ -1967,6 +2185,16 @@ function buildPreviewLogoList() {
   return logos;
 }
 
+function togglePreviewView(uid, view) {
+  const ps = getPreviewState(uid);
+  if (ps.view === view) return;
+  ps.view = view;
+  const line = getLine(uid);
+  const positions = line ? getPositions(line.code, view) : [];
+  ps.activePos = positions.length ? positions[0].id : null;
+  renderPreviewCard(uid);
+}
+
 function selectPreviewPos(uid, posId) {
   const ps = getPreviewState(uid);
   ps.activePos = posId;
@@ -2002,27 +2230,46 @@ function renderPreviewCard(uid) {
   if (!line) return;
 
   const p = PRODUCTS.find(x => x.code === line.code);
-  const positions = getPositions(line.code);
   const ps = getPreviewState(uid);
+  const view = ps.view || 'front';
+  const positions = getPositions(line.code, view);
+  if (positions.length > 0 && !positions.some(pp => pp.id === ps.activePos)) ps.activePos = positions[0].id;
   const availableLogos = buildPreviewLogoList();
 
+  // Update garment image for the active view
+  const imgs = PRODUCT_IMAGES[line.code];
+  const colourImgs = imgs ? (imgs[line.colour] || Object.values(imgs)[0]) : null;
+  const img = document.getElementById('prev-img-' + uid);
+  if (img && colourImgs) {
+    const newSrc = view === 'back' ? colourImgs.back : colourImgs.front;
+    if (newSrc && img.getAttribute('src') !== newSrc) { img.src = newSrc; img.style.display = 'block'; }
+  }
+
+  // Update Front/Back toggle state
+  const vtog = document.getElementById('prev-viewtog-' + uid);
+  if (vtog) {
+    vtog.querySelectorAll('.pv-vbtn').forEach((b, i) => {
+      b.classList.toggle('on', (i === 0 && view === 'front') || (i === 1 && view === 'back'));
+    });
+  }
+
   // Update markers
-  const canvas = document.getElementById('prev-canvas-' + uid);
-  if (canvas) {
-    canvas.querySelectorAll('.pos-marker').forEach(el => el.remove());
+  const box = document.getElementById('prev-imgbox-' + uid);
+  if (box) {
+    box.querySelectorAll('.pos-marker').forEach(el => el.remove());
     positions.forEach(pos => {
       const placement = ps.placements[pos.id];
       const isActive = ps.activePos === pos.id;
+      const plabel = prettyLabel(pos.label);
       const div = document.createElement('div');
       div.className = `pos-marker ${placement ? 'filled' : 'empty'} ${isActive ? 'active-slot' : ''}`;
-      div.style.top = pos.top;
-      div.style.left = pos.left;
-      div.title = pos.label;
+      div.style.cssText = markerStyle(pos);
+      div.title = plabel;
       div.onclick = () => selectPreviewPos(uid, pos.id);
       div.innerHTML = placement
         ? `<img src="${placement.src}" alt="">`
-        : `<span style="font-size:9px;line-height:1;text-align:center;">${pos.label.split(' ').map(w=>w[0]).join('')}</span>`;
-      canvas.appendChild(div);
+        : `<span style="font-size:9px;line-height:1;text-align:center;">${plabel.split(' ').map(w=>w[0]).join('')}</span>`;
+      box.appendChild(div);
     });
   }
 
@@ -2035,7 +2282,7 @@ function renderPreviewCard(uid) {
       return `<button
         class="preview-pos-btn ${placement ? 'filled-pos' : 'empty-pos'} ${isActive ? 'active-pos' : ''}"
         onclick="selectPreviewPos(${uid},'${pos.id}')"
-      >${pos.label}${placement ? ' ✓' : ''}</button>`;
+      >${prettyLabel(pos.label)}${placement ? ' ✓' : ''}</button>`;
     }).join('');
   }
 
