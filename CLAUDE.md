@@ -97,7 +97,7 @@ p2
 
 Branding & Preview
 
-Branding is done directly on the garment preview. Per line: pick a position marker, then upload/place a logo on it. Per-product price bar and the name/number notice are shown here. Product cards render as a single vertical list.
+Branding is done directly on the garment preview. Per line: pick a position marker, then place a logo on it. Logos are uploaded files (several at once) or typed text logos, each with optional colour notes. Per-product price bar and the name & number notice are shown here. Product cards render as a single vertical list.
 
 4
 
@@ -254,7 +254,7 @@ Pricing tiers
 Four tiers per product, driven by which preview positions have a logo placed on them:
 
 base — Left Breast / Front Panel only (free, included)
-small — + Right Breast, Left/Right Sleeve, or Back Centre
+small — + Right Breast or Left/Right Sleeve
 large — + Centre Chest, Shoulders, Upper Back, or Tail
 both — + at least one small and one large position
 Tier logic lives in priceTier(positions), where positions is the synced list of branding-bucket keys for each line. Price updates live as logos are placed/cleared in the Garment Preview.
@@ -263,9 +263,9 @@ Price bucket keys
 
 LOGO_POS was removed. Logo positions now come solely from PRODUCT_POSITIONS (the calibrated preview positions). Each position a logo is placed on is classified for pricing by a normalised label key, produced by brandingKey():
 
-SMALL_POS_KEYS — rightbreast, leftsleeve, rightsleeve, backcentre
+SMALL_POS_KEYS — rightbreast, leftsleeve, rightsleeve
 
-LARGE_POS_KEYS — centrechest, shoulders, shoulder, uppermidbacknotshoulders, tail
+LARGE_POS_KEYS — centrechest, shoulders, uppermidbacknotshoulders, tail
 
 Anything not listed (leftbreast, frontpanel) is the included base logo — free, no supplement.
 
@@ -289,7 +289,7 @@ The live state of the order. Each line object:
 
 }
 
-logoEntries was removed. Logo placement and artwork now live in previewState (per-uid: { activePos, placements, view }) plus the global previewUploadedLogos array. syncLineBranding(uid) derives line.positions from the placements; lineBrandingDetails(line) builds the per-position list (label, view, file name) for the submitted order.
+logoEntries was removed. Placement lives in previewState (per-uid: { activePos, placements, view, showTextForm, editLogoId }); each placement maps a position id → { id: logoId }. The shared per-card logo library is the global previewUploadedLogos array — each item is { id, kind:'file'|'text', label, notes } plus, for files, { file, src, isImage } and, for text logos, { text, font }. syncLineBranding(uid) derives line.positions from the placements; lineBrandingDetails(line) builds the per-position list (label, view, kind, file/text/font/notes) for the submitted order.
 
 PRODUCT_IMAGES
 
@@ -305,19 +305,22 @@ Order Form — Branding & Preview Step (Step 3)
 
 The branding controls and the garment preview were consolidated into a single Garment Preview (May 2026). There is no longer a separate branding panel — customers brand the garment directly on the preview.
 
-Per product line, the preview card shows: the garment image with clickable circular position markers (from PRODUCT_POSITIONS), a "Select position" + "Place logo on selected position" sidebar, a "+ Upload logo" control, and a per-product price bar. The name & number notice is shown once at the top of the section. Product cards render as a single vertical list, one per row.
+Per product line, the preview card shows: the garment image with clickable circular position markers (from PRODUCT_POSITIONS), a "Select position" + "Place logo on selected position" sidebar with the logo library and "↑ Upload logos" / "Aa Add text logo" controls, and a per-product price bar. The name & number notice is shown once at the top of the section. Product cards render as a single vertical list, one per row.
 
-A position only counts toward pricing and the submitted order once a logo has been placed on it. There is no text-only logo option and no per-line copy-from-first — both were removed with the old branding panel.
+A position only counts toward pricing and the submitted order once a logo has been placed on it. Each card has a shared logo library: every item is either an uploaded file (multiple selectable at once — AI/EPS/PDF/PNG/SVG, vector preferred; non-images show a type badge) or a typed text logo, and each carries an optional "Colour notes / artwork description" (plus a font field for text logos), edited via a small inline form on the tile (✎). Text logos are placeable just like images — the marker shows the text. Per-line copy-from-first was not reinstated.
 
 Key functions:
 
 renderPreview() — builds the Garment Preview (header + notice + one card per line); the entry point for step 3 (called by goStep(2))
-renderPreviewCard(uid) — partial re-render of a single card on select / place / clear / front-back toggle
-selectPreviewPos, placePreviewLogo, clearPreviewLogo — position selection and logo placement
-handlePreviewUpload(uid, input) — captures an uploaded logo (File + name) into previewUploadedLogos
+renderPreviewCard(uid) — partial re-render of a single card on select / place / clear / toggle / logo change
+renderLogoAreaHTML(uid) — the per-card logo library: tiles + Upload/Add-text controls + the inline text/edit forms
+selectPreviewPos, placePreviewLogo(uid,logoId), clearPreviewLogo — position selection and placement (placement stores the logo id; the logo is resolved live)
+handlePreviewUpload(uid, input) — captures one or more uploaded files (kind:'file') into previewUploadedLogos
+toggleTextLogoForm / commitTextLogo — create a typed text logo (kind:'text')
+startEditLogo / closeLogoEdit / updateLogoField — per-logo notes / text / font editing
 syncLineBranding(uid) — rebuilds line.positions (price-bucket keys) from the placed logos
-previewPriceBarHTML(line) — the per-card price bar; lineBrandingDetails(line) — placed positions + file names for the order payload/email
-brandingKey(label) — normalises a position label to its price-bucket key
+previewPriceBarHTML(line) — the per-card price bar; lineBrandingDetails(line) — placed positions with kind/file/text/font/notes for the order payload & email
+brandingKey(label) — normalises a position label to its price-bucket key; esc() — HTML-escapes user-supplied strings
 
 Preview position coordinates live in PRODUCT_POSITIONS, keyed by product code → front / back, each position { id, label, top, left, size } as percentages of the image box.
 
@@ -571,5 +574,17 @@ May 2026
 Claude
 
 Page 3 redesign — Branding panel removed; logo position + artwork selection consolidated into the Garment Preview. The preview now drives the live price tier and the submitted order (positions mapped to free/small/large; Upper Back & Tail = large). Product cards switched to a single vertical list. Text-only logos and copy-from-first dropped.
+
+May 2026
+
+Freddie
+
+Removed the redundant Back Centre position and merged the duplicate "shoulder" key into "shoulders" across PRODUCT_POSITIONS and the price buckets.
+
+May 2026
+
+Claude
+
+Multi-image upload, then per-logo Upload/Text restored. Each logo library item is an uploaded file (multi-select; AI/EPS/PDF/PNG/SVG) or a typed text logo, with an optional colour-notes/description field (and font for text). Text logos are placeable like images; payload & email carry kind/text/font/notes; user strings escaped.
 
 Update this table whenever a significant change is made to either file.
