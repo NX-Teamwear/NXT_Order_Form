@@ -97,7 +97,7 @@ p2
 
 Branding & Preview
 
-Per line: tick logo positions, upload artwork or enter text. Live garment preview renders below with draggable position markers.
+Branding is done directly on the garment preview. Per line: pick a position marker, then upload/place a logo on it. Per-product price bar and the name/number notice are shown here. Product cards render as a single vertical list.
 
 4
 
@@ -251,21 +251,23 @@ bag
 
 Pricing tiers
 
-Four tiers per product based on which logo positions are selected:
+Four tiers per product, driven by which preview positions have a logo placed on them:
 
-base — left breast only (free, included)
-small — + right breast, sleeve, or nape
-large — + back centre, front centre, shoulder
-both — + both small and large position types
-Tier logic lives in priceTier(positions). Price updates live as positions are ticked.
+base — Left Breast / Front Panel only (free, included)
+small — + Right Breast, Left/Right Sleeve, or Back Centre
+large — + Centre Chest, Shoulders, Upper Back, or Tail
+both — + at least one small and one large position
+Tier logic lives in priceTier(positions), where positions is the synced list of branding-bucket keys for each line. Price updates live as logos are placed/cleared in the Garment Preview.
 
-LOGO_POS array
+Price bucket keys
 
-Eight logo positions. left_breast is free. All others carry a supplement:
+LOGO_POS was removed. Logo positions now come solely from PRODUCT_POSITIONS (the calibrated preview positions). Each position a logo is placed on is classified for pricing by a normalised label key, produced by brandingKey():
 
-left_breast (free) | right_breast | sleeve | nape
+SMALL_POS_KEYS — rightbreast, leftsleeve, rightsleeve, backcentre
 
-back_centre | front_centre | left_shoulder | right_shoulder
+LARGE_POS_KEYS — centrechest, shoulders, shoulder, uppermidbacknotshoulders, tail
+
+Anything not listed (leftbreast, frontpanel) is the included base logo — free, no supplement.
 
 lines array
 
@@ -279,15 +281,15 @@ The live state of the order. Each line object:
 
   colour,     // selected colour string
 
-  positions,  // array of selected logo position IDs
-
-  logoEntries,// { [posId]: { type, text, fileName, file, font } }
+  positions,  // synced branding-bucket keys for positions with a placed logo (drives pricing)
 
   sizes,      // { [sizeLabel]: qty }
 
   pers        // personalisation rows array
 
 }
+
+logoEntries was removed. Logo placement and artwork now live in previewState (per-uid: { activePos, placements, view }) plus the global previewUploadedLogos array. syncLineBranding(uid) derives line.positions from the placements; lineBrandingDetails(line) builds the per-position list (label, view, file name) for the submitted order.
 
 PRODUCT_IMAGES
 
@@ -301,22 +303,25 @@ Images follow the pattern: {CODE}/{CODE}_{ColourName}_FRONT.jpg and _BACK.jpg. S
 
 Order Form — Branding & Preview Step (Step 3)
 
-This is the most complex step. It was originally two separate steps that were merged.
+The branding controls and the garment preview were consolidated into a single Garment Preview (May 2026). There is no longer a separate branding panel — customers brand the garment directly on the preview.
 
-Top section (branding): Per product line — logo position checkboxes, upload or text entry per position, live price bar.
+Per product line, the preview card shows: the garment image with clickable circular position markers (from PRODUCT_POSITIONS), a "Select position" + "Place logo on selected position" sidebar, a "+ Upload logo" control, and a per-product price bar. The name & number notice is shown once at the top of the section. Product cards render as a single vertical list, one per row.
 
-Bottom section (preview): Auto-renders below the branding form. Shows the garment image with circular position markers overlaid at % coordinates. Markers update live when positions are ticked.
+A position only counts toward pricing and the submitted order once a logo has been placed on it. There is no text-only logo option and no per-line copy-from-first — both were removed with the old branding panel.
 
 Key functions:
 
-renderBranding() — renders the branding controls, then calls renderPreview()
-renderPreview() — builds the garment preview cards beneath
-togglePos(uid, posId) — ticks/unticks a position, updates price, re-renders preview
-handleFile(uid, posId, input) — captures uploaded file, refreshes logo picker in preview
-renderPreviewCard(uid) — partial re-render of one preview card (used on drag/click)
-Preview position coordinates are defined in POS_TEMPLATES (JS object) keyed by garment template type (tshirt, hoodie, polo, cap, beanie, bag). Each position has { id, label, top, left, size } as percentages of the image container.
+renderPreview() — builds the Garment Preview (header + notice + one card per line); the entry point for step 3 (called by goStep(2))
+renderPreviewCard(uid) — partial re-render of a single card on select / place / clear / front-back toggle
+selectPreviewPos, placePreviewLogo, clearPreviewLogo — position selection and logo placement
+handlePreviewUpload(uid, input) — captures an uploaded logo (File + name) into previewUploadedLogos
+syncLineBranding(uid) — rebuilds line.positions (price-bucket keys) from the placed logos
+previewPriceBarHTML(line) — the per-card price bar; lineBrandingDetails(line) — placed positions + file names for the order payload/email
+brandingKey(label) — normalises a position label to its price-bucket key
 
-⚠️ The preview coordinates are currently placeholders and known to be inaccurate. This is the top outstanding task — see below.
+Preview position coordinates live in PRODUCT_POSITIONS, keyed by product code → front / back, each position { id, label, top, left, size } as percentages of the image box.
+
+⚠️ Preview coordinates should be verified against real product imagery with nx_calibrator.html before go-live — see Outstanding Tasks.
 
 Calibrator Tool — How It Works
 
@@ -405,7 +410,7 @@ No payment in the form — customers receive a payment link separately after app
 
 Submission via Zapier webhook — the form POSTs order data as JSON to a Zapier webhook which emails the NX team. The webhook URL was removed from the form during development and must be re-added before launch. Generate a fresh webhook URL — the old one was exposed in chat and should be considered compromised.
 
-File uploads not yet wired — artwork upload UI exists and captures the filename, but actual file transfer to storage is not implemented. Plan is Nextcloud + Cloudflare Worker. Parked until launch.
+File uploads not yet wired — the preview's "+ Upload logo" control captures the file object and filename in memory, but actual file transfer to storage is not implemented. Plan is Nextcloud + Cloudflare Worker. Parked until launch.
 
 BigCommerce image CDN — all product images are served from the BigCommerce store's content directory. The folder is named 02 - Ralawise Image (Do not use) — the "Do not use" refers to the raw supplier images, not the CDN URL. The URLs work fine.
 
@@ -460,7 +465,7 @@ Outstanding Tasks
 
 🟡 Before launch
 
-3. Artwork file upload Implement actual file upload — plan is Nextcloud + Cloudflare Worker. Currently the form captures filenames only; the files themselves go nowhere.
+3. Artwork file upload Implement actual file upload — plan is Nextcloud + Cloudflare Worker. Currently the preview captures the file objects in memory (previewUploadedLogos); they are not yet transferred to storage.
 
 4. BigCommerce embed test Paste the full HTML into a BigCommerce Custom HTML widget on a Web Page and test end-to-end in that environment. Check for any CSP or iframe issues.
 
@@ -560,5 +565,11 @@ May 2026
 Katie
 
 CONTEXT.md updated with two-phase roadmap (Phase 1 independent form, Phase 2 BigCommerce-integrated)
+
+May 2026
+
+Claude
+
+Page 3 redesign — Branding panel removed; logo position + artwork selection consolidated into the Garment Preview. The preview now drives the live price tier and the submitted order (positions mapped to free/small/large; Upper Back & Tail = large). Product cards switched to a single vertical list. Text-only logos and copy-from-first dropped.
 
 Update this table whenever a significant change is made to either file.
