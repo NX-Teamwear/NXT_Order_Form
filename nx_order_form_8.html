@@ -963,8 +963,8 @@ const PRODUCT_IMAGES = {
 // Branding price buckets — keyed by the normalised preview-position label
 // (see brandingKey). Anything not listed (Left Breast, Front Panel) is the
 // included base logo; small/large positions add the matching supplement.
-const SMALL_POS_KEYS = ['rightbreast','leftsleeve','rightsleeve','backcentre'];
-const LARGE_POS_KEYS = ['centrechest','shoulders','shoulder','uppermidbacknotshoulders','tail'];
+const SMALL_POS_KEYS = ['rightbreast','leftsleeve','rightsleeve'];
+const LARGE_POS_KEYS = ['centrechest','shoulders','uppermidbacknotshoulders','tail'];
 
 const COLOUR_HEX = {'Arctic White':'#f5f5ec','White':'#ffffff','Jet Black':'#181818','Black':'#111111','French Navy':'#1a2455','Navy':'#162040','Dark Navy':'#0f1830','Oxford Navy':'#1e2d5a','New French Navy':'#1a2455','Royal Blue':'#2d5fa8','Royal':'#2d5fa8','Bright Royal':'#3060c0','Sapphire Blue':'#1e5ab0','Cornflower Blue':'#6482c8','Cornflower':'#6482c8','Fire Red':'#d42020','Red':'#cc2020','Classic Red':'#c82020','Burgundy':'#7a1f3a','Bottle Green':'#1a5c2a','Bottle':'#1a5c2a','Kelly Green':'#2d8a2d','Kelly':'#2d8a2d','Earthy Green':'#4a7a3a','Forest Green':'#1e5c28','Electric Green':'#40e040','Lime Green':'#88e030','Olive Green':'#6b7a28','Pepper Green':'#3a6a2a','Spruce':'#2a5a3a','Verdant Green':'#3a7a3a','Charcoal':'#3a3a3a','Heather Grey':'#a0a0b0','Graphite Grey':'#505060','Anthracite':'#404040','Electric Orange':'#f06020','Orange':'#f07020','Orange Crush':'#e85020','Hot Pink':'#e0406a','Electric Pink':'#f050a0','Cotton Pink':'#f0b0c0','Dark Pink':'#c04080','Purple':'#6030a0','Maroon':'#6a1a2a','Sun Yellow':'#f8d020','Sunflower':'#f8c820','Electric Yellow':'#f8f020','Gold':'#c8a020','Ochre':'#c8882a','Spectra Yellow':'#f8e020','Viva Yellow':'#f8d820','Ash':'#c0c0c0','Blue Soul':'#4060a0','Desert Sand':'#d8b87a','Hawaiian Blue':'#2878b8','Pool Blue':'#4898c8','Jade':'#2a9a6a','Stargazer':'#4040a0','Worker Blue':'#3858a0','Sky Blue':'#60a0d8','Digital Lavender':'#b098d0'};
 
@@ -1604,7 +1604,6 @@ const PRODUCT_POSITIONS = {
       {id:"rightsleeve",label:"RightSleeve",top:"34.9%",left:"17.0%",size:90}
     ],
     "back": [
-      {id:"pos_2",label:"Back Centre",top:"79.7%",left:"15.1%",size:56},
       {id:"tail",label:"Tail",top:"83.6%",left:"50.1%",size:140},
       {id:"shoulders",label:"Shoulders",top:"18.3%",left:"50.0%",size:140},
       {id:"uppermidbacknotshoulders",label:"UpperMidBackNOTSHOULDERS",top:"35.3%",left:"50.0%",size:140}
@@ -1675,7 +1674,7 @@ const PRODUCT_POSITIONS = {
       {id:"rightsleeve",label:"RightSleeve",top:"38.0%",left:"18.3%",size:76}
     ],
     "back": [
-      {id:"shoulder",label:"Shoulder",top:"26.7%",left:"50.0%",size:120},
+      {id:"shoulders",label:"Shoulders",top:"26.7%",left:"50.0%",size:120},
       {id:"uppermidbacknotshoulders",label:"UpperMidBackNOTSHOULDERS",top:"41.7%",left:"50.0%",size:120},
       {id:"tail",label:"Tail",top:"78.1%",left:"50.0%",size:120}
     ]
@@ -1751,7 +1750,7 @@ const PRODUCT_POSITIONS = {
       {id:"centrechest",label:"CentreChest",top:"44.6%",left:"42.7%",size:140}
     ],
     "back": [
-      {id:"shoulder",label:"Shoulder",top:"19.0%",left:"50.3%",size:130},
+      {id:"shoulders",label:"Shoulders",top:"19.0%",left:"50.3%",size:130},
       {id:"uppermidbacknotshoulders",label:"UpperMidBackNOTSHOULDERS",top:"35.4%",left:"50.3%",size:130},
       {id:"tail",label:"Tail",top:"82.7%",left:"49.2%",size:130}
     ]
@@ -1806,9 +1805,7 @@ const LABEL_MAP = {
   centrechest: 'Centre Chest',
   leftsleeve: 'Left Sleeve',
   rightsleeve: 'Right Sleeve',
-  backcentre: 'Back Centre',
   shoulders: 'Shoulders',
-  shoulder: 'Shoulders',
   uppermidbacknotshoulders: 'Upper Back',
   tail: 'Tail',
   frontpanel: 'Front Panel',
