@@ -131,7 +131,7 @@ PRODUCTS array
 
 17 products. Each has:
 
-{ code, name, category, sizes, rrp, rrpLarge, rrpSmall, rrpBoth }
+{ code, name, cat, age, colours, rrp, sizes }   // rrp is the base price; per-logo fees are global constants (see Pricing)
 
 
 
@@ -249,25 +249,28 @@ Universal Backpack
 
 bag
 
-Pricing tiers
+Pricing (additive, per product line)
 
-Four tiers per product, driven by which preview positions have a logo placed on them:
+The four hardcoded tiers (rrp/rrpSmall/rrpLarge/rrpBoth + priceTier) were removed. Price is now built up from the base:
 
-base — Left Breast / Front Panel only (free, included)
-small — + Right Breast or Left/Right Sleeve
-large — + Centre Chest, Shoulders, Upper Back, or Tail
-both — + at least one small and one large position
-Tier logic lives in priceTier(positions), where positions is the synced list of branding-bucket keys for each line. Price updates live as logos are placed/cleared in the Garment Preview.
+linePrice = rrp + max(0, smallCount − FREE_SMALL_LOGOS) × SMALL_LOGO_FEE + largeCount × LARGE_LOGO_FEE
+
+base — product rrp, which includes the free base logo (Left Breast / Front Panel)
+first small logo — free (FREE_SMALL_LOGOS = 1)
+each further small logo — + SMALL_LOGO_FEE (£2.50)
+each large logo — + LARGE_LOGO_FEE (£4.00)
+
+Constants live at the top of the PRICING block; logoCounts(line) tallies small/large from line.positions, logoSupplement(line) is the add-on, linePrice(line) the per-item total. Price updates live as logos are placed/cleared in the Garment Preview; the per-card price bar shows base + per-type breakdown.
 
 Price bucket keys
 
-LOGO_POS was removed. Logo positions now come solely from PRODUCT_POSITIONS (the calibrated preview positions). Each position a logo is placed on is classified for pricing by a normalised label key, produced by brandingKey():
+LOGO_POS was removed. Logo positions come solely from PRODUCT_POSITIONS (the calibrated preview positions). Each position a logo is placed on is classified by a normalised label key, produced by brandingKey():
 
 SMALL_POS_KEYS — rightbreast, leftsleeve, rightsleeve
 
 LARGE_POS_KEYS — centrechest, shoulders, uppermidbacknotshoulders, tail
 
-Anything not listed (leftbreast, frontpanel) is the included base logo — free, no supplement.
+Anything not listed (leftbreast, frontpanel) is the included base logo — counts toward neither fee.
 
 lines array
 
@@ -586,5 +589,17 @@ May 2026
 Claude
 
 Multi-image upload, then per-logo Upload/Text restored. Each logo library item is an uploaded file (multi-select; AI/EPS/PDF/PNG/SVG) or a typed text logo, with an optional colour-notes/description field (and font for text). Text logos are placeable like images; payload & email carry kind/text/font/notes; user strings escaped.
+
+May 2026
+
+Claude
+
+PDF/EPS/AI now show a clear file-type placeholder (browsers cannot rasterise these client-side) with robust extension-based detection instead of a blank/broken image. Garment preview image enlarged.
+
+May 2026
+
+Claude
+
+Pricing switched to an additive per-logo model: base = product rrp, first small logo free, each further small +£2.50, each large +£4.00 (constants SMALL_LOGO_FEE / LARGE_LOGO_FEE / FREE_SMALL_LOGOS). Removed the rrpSmall/rrpLarge/rrpBoth fields and priceTier(); order payload/email now carry base_price, small_logos, large_logos and logo_supplement instead of price_tier.
 
 Update this table whenever a significant change is made to either file.
