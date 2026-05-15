@@ -517,7 +517,10 @@ textarea { resize: vertical; min-height: 80px; margin-bottom: 0; }
 
 .logo-pick-wrap { position: relative; display: inline-flex; }
 .logo-pick-item.text-logo span { font-size: 9px; font-weight: 800; line-height: 1.05; text-align: center; color: #0e1a2b; padding: 2px; overflow: hidden; word-break: break-word; }
-.logo-pick-item.file-logo span { font-size: 9px; font-weight: 800; color: #0e1a2b; letter-spacing: 0.5px; }
+.logo-file-badge { display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; gap: 2px; }
+.logo-file-badge .lfb-ext { font-size: 12px; font-weight: 800; color: #0e1a2b; letter-spacing: 0.5px; }
+.logo-file-badge .lfb-cap { font-size: 7px; font-weight: 700; color: #6a7280; letter-spacing: 1.5px; }
+.logo-file-chip { display: inline-block; background: #0e1a2b; color: #fff; font-size: 8px; font-weight: 800; padding: 2px 4px; border-radius: 3px; letter-spacing: 0.5px; line-height: 1; }
 .logo-pick-edit { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; border: 0.5px solid var(--nx-border); background: var(--nx-navy3); color: var(--nx-blue); font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
 .logo-pick-edit:hover { background: var(--nx-blue-dim); }
 
@@ -2066,18 +2069,37 @@ function renderPreview() {
   c.appendChild(grid);
 }
 
+// Only these can be drawn by the browser in an <img>. AI/EPS/PDF and
+// other print/vector formats cannot be rasterised client-side, so they
+// get a clear file-type placeholder rather than a blank/broken image.
+const RENDERABLE_IMG_EXT = ['png','jpg','jpeg','gif','webp','svg','bmp','avif','apng','ico'];
+function fileExt(name) {
+  const m = /\.([a-z0-9]+)\s*$/i.exec(String(name == null ? '' : name));
+  return m ? m[1].toLowerCase() : '';
+}
+function isRenderableImage(file) {
+  const ext = fileExt(file && file.name);
+  if (['ai','eps','pdf','psd','tif','tiff'].includes(ext)) return false;
+  if (RENDERABLE_IMG_EXT.includes(ext)) return true;
+  const t = (file && file.type) || '';
+  return /^image\//.test(t) && !/(eps|illustrator|postscript|tiff?)/i.test(t);
+}
+function fileBadgeHTML(label, ctx) {
+  const ext = (fileExt(label) || 'file').toUpperCase().slice(0, 4);
+  if (ctx === 'marker') return `<span class="logo-file-chip">${esc(ext)}</span>`;
+  return `<span class="logo-file-badge"><span class="lfb-ext">${esc(ext)}</span><span class="lfb-cap">FILE</span></span>`;
+}
+
 function logoTileInnerHTML(logo) {
   if (logo.kind === 'text') return `<span>${esc(logo.text || 'T')}</span>`;
   if (logo.isImage)         return `<img src="${logo.src}" alt="">`;
-  const ext = ((logo.label || '').split('.').pop() || 'FILE').toUpperCase().slice(0, 4);
-  return `<span>${esc(ext)}</span>`;
+  return fileBadgeHTML(logo.label, 'tile');
 }
 
 function logoMarkerInnerHTML(logo) {
   if (logo.kind === 'text') return `<span style="font-size:8px;font-weight:800;line-height:1;text-align:center;color:#0e1a2b;">${esc((logo.text || '').slice(0, 14))}</span>`;
   if (logo.isImage)         return `<img src="${logo.src}" alt="">`;
-  const ext = ((logo.label || '').split('.').pop() || 'FILE').toUpperCase().slice(0, 4);
-  return `<span style="font-size:8px;font-weight:800;color:#0e1a2b;">${esc(ext)}</span>`;
+  return fileBadgeHTML(logo.label, 'marker');
 }
 
 function tileKindClass(logo) {
@@ -2242,8 +2264,7 @@ function handlePreviewUpload(uid, input) {
   if (!files.length) return;
   files.forEach(file => {
     const src = URL.createObjectURL(file);
-    const isImage = /^image\//.test(file.type);
-    previewUploadedLogos.push({ id: 'prev-upload-' + (++previewUploadSeq), kind: 'file', file, src, isImage, label: file.name, notes: '' });
+    previewUploadedLogos.push({ id: 'prev-upload-' + (++previewUploadSeq), kind: 'file', file, src, isImage: isRenderableImage(file), label: file.name, notes: '' });
   });
   input.value = '';
   renderPreviewCard(uid);
