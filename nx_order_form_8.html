@@ -977,9 +977,10 @@ const PRODUCT_IMAGES = {
 };
 
 // Branding price buckets — keyed by the normalised preview-position label
-// (see brandingKey). Anything not listed (Left Breast, Front Panel) is the
-// included base logo; small/large positions add the matching supplement.
-const SMALL_POS_KEYS = ['rightbreast','leftsleeve','rightsleeve'];
+// (see brandingKey). Left Breast / Front Panel count as small logos so the
+// single free-small allowance covers the usual main logo; the first small
+// is free, each further small / every large adds its fee.
+const SMALL_POS_KEYS = ['leftbreast','frontpanel','rightbreast','leftsleeve','rightsleeve'];
 const LARGE_POS_KEYS = ['centrechest','shoulders','uppermidbacknotshoulders','tail'];
 
 const COLOUR_HEX = {'Arctic White':'#f5f5ec','White':'#ffffff','Jet Black':'#181818','Black':'#111111','French Navy':'#1a2455','Navy':'#162040','Dark Navy':'#0f1830','Oxford Navy':'#1e2d5a','New French Navy':'#1a2455','Royal Blue':'#2d5fa8','Royal':'#2d5fa8','Bright Royal':'#3060c0','Sapphire Blue':'#1e5ab0','Cornflower Blue':'#6482c8','Cornflower':'#6482c8','Fire Red':'#d42020','Red':'#cc2020','Classic Red':'#c82020','Burgundy':'#7a1f3a','Bottle Green':'#1a5c2a','Bottle':'#1a5c2a','Kelly Green':'#2d8a2d','Kelly':'#2d8a2d','Earthy Green':'#4a7a3a','Forest Green':'#1e5c28','Electric Green':'#40e040','Lime Green':'#88e030','Olive Green':'#6b7a28','Pepper Green':'#3a6a2a','Spruce':'#2a5a3a','Verdant Green':'#3a7a3a','Charcoal':'#3a3a3a','Heather Grey':'#a0a0b0','Graphite Grey':'#505060','Anthracite':'#404040','Electric Orange':'#f06020','Orange':'#f07020','Orange Crush':'#e85020','Hot Pink':'#e0406a','Electric Pink':'#f050a0','Cotton Pink':'#f0b0c0','Dark Pink':'#c04080','Purple':'#6030a0','Maroon':'#6a1a2a','Sun Yellow':'#f8d020','Sunflower':'#f8c820','Electric Yellow':'#f8f020','Gold':'#c8a020','Ochre':'#c8882a','Spectra Yellow':'#f8e020','Viva Yellow':'#f8d820','Ash':'#c0c0c0','Blue Soul':'#4060a0','Desert Sand':'#d8b87a','Hawaiian Blue':'#2878b8','Pool Blue':'#4898c8','Jade':'#2a9a6a','Stargazer':'#4040a0','Worker Blue':'#3858a0','Sky Blue':'#60a0d8','Digital Lavender':'#b098d0'};
@@ -996,9 +997,9 @@ function newLine(code) {
 function getLine(u) { return lines.find(l => l.uid === u); }
 
 /* ── PRICING ──
-   Base = product rrp and includes the free base logo (Left Breast /
-   Front Panel). The first small logo is then included free; each
-   further small logo adds SMALL_LOGO_FEE; every large logo adds
+   Base = product rrp. The first small logo placed (Left Breast /
+   Front Panel are small, so this is usually the main logo) is free;
+   each further small logo adds SMALL_LOGO_FEE; every large logo adds
    LARGE_LOGO_FEE. Counts are per product line. */
 const SMALL_LOGO_FEE   = 2.50;  // per small logo beyond the first
 const LARGE_LOGO_FEE   = 4.00;  // per large logo

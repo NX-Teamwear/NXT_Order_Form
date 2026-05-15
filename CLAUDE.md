@@ -255,22 +255,22 @@ The four hardcoded tiers (rrp/rrpSmall/rrpLarge/rrpBoth + priceTier) were remove
 
 linePrice = rrp + max(0, smallCount − FREE_SMALL_LOGOS) × SMALL_LOGO_FEE + largeCount × LARGE_LOGO_FEE
 
-base — product rrp, which includes the free base logo (Left Breast / Front Panel)
-first small logo — free (FREE_SMALL_LOGOS = 1)
+base — product rrp (no logo charge yet)
+first small logo placed — free (FREE_SMALL_LOGOS = 1); Left Breast / Front Panel are small, so this normally covers the main logo
 each further small logo — + SMALL_LOGO_FEE (£2.50)
 each large logo — + LARGE_LOGO_FEE (£4.00)
 
-Constants live at the top of the PRICING block; logoCounts(line) tallies small/large from line.positions, logoSupplement(line) is the add-on, linePrice(line) the per-item total. Price updates live as logos are placed/cleared in the Garment Preview; the per-card price bar shows base + per-type breakdown.
+So Left Breast only = rrp; Left + Right Breast = rrp + £2.50; Right Breast alone = rrp (it's the free small); add a large = +£4 each. Constants live at the top of the PRICING block; logoCounts(line) tallies small/large from line.positions, logoSupplement(line) is the add-on, linePrice(line) the per-item total. Price updates live as logos are placed/cleared in the Garment Preview; the per-card price bar shows base + per-type breakdown.
 
 Price bucket keys
 
 LOGO_POS was removed. Logo positions come solely from PRODUCT_POSITIONS (the calibrated preview positions). Each position a logo is placed on is classified by a normalised label key, produced by brandingKey():
 
-SMALL_POS_KEYS — rightbreast, leftsleeve, rightsleeve
+SMALL_POS_KEYS — leftbreast, frontpanel, rightbreast, leftsleeve, rightsleeve
 
 LARGE_POS_KEYS — centrechest, shoulders, uppermidbacknotshoulders, tail
 
-Anything not listed (leftbreast, frontpanel) is the included base logo — counts toward neither fee.
+Left Breast and Front Panel are deliberately "small" so the one free-small allowance lands on the usual main logo. Anything not listed counts toward neither fee.
 
 lines array
 
@@ -601,5 +601,11 @@ May 2026
 Claude
 
 Pricing switched to an additive per-logo model: base = product rrp, first small logo free, each further small +£2.50, each large +£4.00 (constants SMALL_LOGO_FEE / LARGE_LOGO_FEE / FREE_SMALL_LOGOS). Removed the rrpSmall/rrpLarge/rrpBoth fields and priceTier(); order payload/email now carry base_price, small_logos, large_logos and logo_supplement instead of price_tier.
+
+May 2026
+
+Claude
+
+Pricing fix: Left Breast / Front Panel are now classed as small logos (added to SMALL_POS_KEYS). Previously they were a separate free base logo on top of the free first small, so Left + Right Breast incurred no charge. Now the single free-small allowance covers the main logo and the second breast logo is correctly +£2.50.
 
 Update this table whenever a significant change is made to either file.
