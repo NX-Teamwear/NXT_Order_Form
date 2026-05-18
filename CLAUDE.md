@@ -325,9 +325,9 @@ syncLineBranding(uid) — rebuilds line.positions (price-bucket keys) from the p
 previewPriceBarHTML(line) — the per-card price bar; lineBrandingDetails(line) — placed positions with kind/file/text/font/notes for the order payload & email
 brandingKey(label) — normalises a position label to its price-bucket key; esc() — HTML-escapes user-supplied strings
 
-Preview position coordinates live in PRODUCT_POSITIONS, keyed by product code → front / back, each position { id, label, top, left, size } as percentages of the image box.
+Preview position coordinates are per colour: PRODUCT_POSITIONS_BY_COLOUR (code → colour → front/back) holds the calibrated values; getProductPositions(code, colour) returns the colour's set, falling back to the single-set PRODUCT_POSITIONS reference (used by JH06J/BC015/BG212 — "no change" — and any uncalibrated colour). getPositions(code, colour, view) is the accessor used throughout the preview. Each position is { id, label, top, left, size } as percentages of the image box.
 
-⚠️ Preview coordinates should be verified against real product imagery with nx_calibrator.html before go-live — see Outstanding Tasks.
+⚠️ Per-colour coordinates were calibrated with nxt_calibrator_v2.html and wired in; still worth a visual spot-check across colours before go-live — see Outstanding Tasks.
 
 Calibrator Tool — How It Works
 
@@ -465,7 +465,7 @@ Outstanding Tasks
 
 🔴 Critical (blocks go-live)
 
-1. Calibrate logo position coordinates Use the calibrators with real product imagery showing correct logo placements. nxt_calibrator.html does one reference image per product; nxt_calibrator_v2.html does every colour variant (seeded from the current reference, nudge per image) and outputs PRODUCT_POSITIONS_BY_COLOUR (code → colour → front/back). Wiring the order form to consume per-colour positions (key PRODUCT_POSITIONS by colour with a fallback) is a deferred follow-up — not done yet.
+1. Calibrate logo position coordinates DONE (May 2026) — per-colour coordinates calibrated in nxt_calibrator_v2.html and wired into the order form as PRODUCT_POSITIONS_BY_COLOUR (14 products / 196 colours). JH06J, BC015, BG212 ("no change needed") and any uncalibrated colour fall back to the single-set PRODUCT_POSITIONS reference via getProductPositions(). Remaining: a visual spot-check across colour variants before go-live, and per-colour calibration of JH06J/BC015/BG212 if their variants ever need it.
 
 2. Re-add Zapier webhook URL Generate a fresh webhook URL in Zapier (the old one is compromised). Add it to handleSubmit() in the order form.
 
@@ -613,5 +613,11 @@ May 2026
 Claude
 
 Added nxt_calibrator_v2.html — per-colour calibrator. Driven by the order form's PRODUCT_IMAGES manifest (17 products, 211 colours, ~422 front/back images); every colour seeded from the current PRODUCT_POSITIONS reference, manual nudge per image, colour stepper, progress counts, "apply to all colours" accelerator. Outputs PRODUCT_POSITIONS_BY_COLOUR (code → colour → front/back). Order-form wiring to consume per-colour positions is a deferred follow-up.
+
+May 2026
+
+Claude
+
+Wired per-colour calibration into the order form. Added PRODUCT_POSITIONS_BY_COLOUR (14 products / 196 colours, from nxt_calibrator_v2.html) and getProductPositions(code, colour) — per-colour positions with fallback to the single-set PRODUCT_POSITIONS reference for JH06J/BC015/BG212 ("no change") and any uncalibrated colour. getPositions is now colour-aware (code, colour, view); preview/markers/pricing-sync/payload all resolve positions per selected colour.
 
 Update this table whenever a significant change is made to either file.
