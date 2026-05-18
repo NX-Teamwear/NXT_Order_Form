@@ -114,6 +114,9 @@ input.cv:focus { border-color:var(--blue); color:var(--white); background:rgba(9
 .btn-reset:hover { background:rgba(245,166,35,0.08); border-color:var(--amber); }
 .btn-apply { background:rgba(61,214,140,0.09); border-color:rgba(61,214,140,0.4); color:var(--green); }
 .btn-apply:hover { background:rgba(61,214,140,0.16); }
+.actrow2 { display:flex; gap:6px; padding:0 7px 7px; flex-shrink:0; }
+.actrow2 .csel { flex:1; min-width:0; max-width:none; }
+.actrow2 .btn { white-space:nowrap; }
 .addbt { display:flex; align-items:center; justify-content:center; width:calc(100% - 14px); margin:0 7px 7px; padding:7px; background:transparent; border:0.5px dashed rgba(91,195,235,0.22); border-radius:6px; color:var(--muted); font-family:var(--font); font-size:11px; cursor:pointer; transition:all .1s; flex-shrink:0; }
 .addbt:hover { border-color:var(--blue); color:var(--blue); }
 
@@ -184,6 +187,10 @@ input.cv:focus { border-color:var(--blue); color:var(--white); background:rgba(9
     <div class="actrow" id="actrow" style="display:none">
       <button class="btn btn-reset" onclick="resetImage()" title="Re-seed this image from the product reference">↺ Reset to reference</button>
       <button class="btn btn-apply" onclick="applyToAllColours()" title="Copy this image's positions to every colour of this product">⇉ Apply to all colours</button>
+    </div>
+    <div class="actrow2" id="actrow2" style="display:none">
+      <select class="csel" id="copyTarget" title="Pick a colour to copy these positions to"></select>
+      <button class="btn btn-apply" onclick="copyToColour()" title="Copy this image's front + back positions to the selected colour">⇉ Copy to colour</button>
     </div>
     <button class="addbt" id="addbt" style="display:none" onclick="addManual()">+ Add position at centre</button>
     <div class="outwrap">
@@ -738,6 +745,7 @@ function selectProduct(code){
   document.getElementById('nextCol').disabled = false;
   document.getElementById('addbt').style.display = '';
   document.getElementById('actrow').style.display = '';
+  document.getElementById('actrow2').style.display = '';
 
   loadColourView();
   renderPositions();
@@ -752,6 +760,20 @@ function buildColourSelect(){
     const adj = calibData[currentCode] && calibData[currentCode][c] && calibData[currentCode][c].adjusted;
     return `<option value="${c.replace(/"/g,'&quot;')}"${c===currentColour?' selected':''}>${adj?'✓ ':''}${c}</option>`;
   }).join('');
+  buildCopyTarget();
+}
+
+function buildCopyTarget(){
+  const sel = document.getElementById('copyTarget');
+  if(!sel) return;
+  const prev = sel.value;
+  const cols = coloursOf(currentCode).filter(c=>c!==currentColour);
+  sel.innerHTML = cols.map(c=>{
+    const adj = calibData[currentCode] && calibData[currentCode][c] && calibData[currentCode][c].adjusted;
+    return `<option value="${c.replace(/"/g,'&quot;')}">${adj?'✓ ':''}${c}</option>`;
+  }).join('');
+  if(prev && cols.indexOf(prev)>-1) sel.value = prev;
+  sel.disabled = cols.length===0;
 }
 
 /* ── COLOUR / VIEW NAV ── */
@@ -1032,6 +1054,21 @@ function applyToAllColours(){
   });
   updateCount(currentCode); buildColourSelect(); refreshSeedTag();
   renderDots(); renderPositions(); updateOutput();
+}
+function copyToColour(){
+  if(!currentCode) return;
+  const sel = document.getElementById('copyTarget');
+  const target = sel && sel.value;
+  if(!target || target===currentColour) return;
+  if(!confirm('Copy '+currentColour+'’s front + back positions to '+target+'?\nThis overwrites '+target+'’s current positions.')) return;
+  const src = cur();
+  const f = deep(src.front), b = deep(src.back);
+  ensureSeed(currentCode,target);
+  calibData[currentCode][target].front = f;
+  calibData[currentCode][target].back  = b;
+  calibData[currentCode][target].adjusted = true;
+  updateCount(currentCode);
+  setColour(target);   // jump to the target so you can verify the result
 }
 
 /* ── UNDO ── (per code+colour) */
