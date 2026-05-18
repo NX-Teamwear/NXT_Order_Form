@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NX Logo Position Calibrator</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy:#0e1a2b; --navy2:#162236;
+  --blue:#5bc3eb; --green:#3dd68c; --red:#e84b4b; --amber:#f5a623;
+  --white:#f0f4f8; --muted:#7a8fa6; --border:rgba(91,195,235,0.15);
+  --font:'Barlow',system-ui,sans-serif;
+}
+body { background:var(--navy); color:var(--white); font-family:var(--font); height:100vh; overflow:hidden; }
+.app { display:grid; grid-template-columns:268px 1fr 300px; height:100vh; }
+
+/* LEFT */
+.panel-left { background:var(--navy2); border-right:0.5px solid var(--border); display:flex; flex-direction:column; overflow:hidden; }
+.phdr { padding:12px 14px; border-bottom:0.5px solid var(--border); flex-shrink:0; }
+.phdr h2 { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:2px; color:var(--blue); }
+.phdr p { font-size:10px; color:var(--muted); margin-top:3px; line-height:1.5; }
+.plist { flex:1; overflow-y:auto; padding:5px; }
+.pitem { display:flex; align-items:center; gap:7px; padding:6px 9px; border-radius:6px; cursor:pointer; border:0.5px solid transparent; margin-bottom:2px; transition:all .1s; }
+.pitem:hover { background:rgba(91,195,235,0.06); border-color:var(--border); }
+.pitem.active { background:rgba(91,195,235,0.12); border-color:var(--blue); }
+.pcode { font-size:10px; font-weight:700; color:var(--blue); font-family:monospace; min-width:44px; }
+.pname { font-size:11px; color:var(--white); flex:1; line-height:1.3; }
+.pcount { font-size:9px; color:var(--green); margin-left:auto; flex-shrink:0; }
+.pcount.none { color:var(--muted); }
+
+/* CANVAS */
+.canvas-area { display:flex; flex-direction:column; overflow:hidden; }
+.ctb { padding:7px 12px; border-bottom:0.5px solid var(--border); display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:rgba(0,0,0,0.25); flex-shrink:0; }
+.ctb-name { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:800; text-transform:uppercase; }
+.ctb-sub { font-size:10px; color:var(--muted); font-family:monospace; }
+.sp { flex:1; }
+.btn { padding:5px 11px; border-radius:5px; border:0.5px solid; font-family:var(--font); font-size:11px; font-weight:600; cursor:pointer; transition:all .1s; white-space:nowrap; }
+.btn-blue { background:var(--blue); border-color:var(--blue); color:var(--navy); }
+.btn-blue:hover { opacity:.85; }
+.btn-ghost { background:transparent; border-color:var(--border); color:var(--muted); }
+.btn-ghost:hover { border-color:var(--blue); color:var(--blue); }
+.btn-view { background:transparent; border-color:rgba(91,195,235,0.35); color:var(--blue); }
+.btn-view.active { background:rgba(91,195,235,0.15); }
+.btn-undo { background:transparent; border-color:rgba(245,166,35,0.3); color:var(--amber); }
+.btn-undo:hover { background:rgba(245,166,35,0.08); border-color:var(--amber); }
+.btn-undo:disabled { opacity:.3; cursor:default; pointer-events:none; }
+.undo-ct { font-size:10px; color:var(--muted); }
+
+.cwrap { flex:1; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#0d0d0d; position:relative; }
+.chint { text-align:center; color:var(--muted); pointer-events:none; }
+.chint .big { font-size:36px; opacity:.12; margin-bottom:8px; }
+.chint p { font-size:11px; }
+
+.imgc { position:relative; display:inline-block; user-select:none; cursor:crosshair; }
+.imgc img { display:block; max-height:calc(100vh - 52px); max-width:100%; object-fit:contain; pointer-events:none; }
+
+.pos-dot {
+  position:absolute; border-radius:50%; border:2.5px solid;
+  display:flex; align-items:center; justify-content:center;
+  transform:translate(-50%,-50%); font-size:8px; font-weight:800;
+  transition:box-shadow .12s; cursor:grab; touch-action:none;
+}
+.pos-dot:hover { box-shadow:0 0 0 5px rgba(91,195,235,0.22); }
+.pos-dot.selected { box-shadow:0 0 0 5px rgba(91,195,235,0.45); }
+.pos-dot.dragging { cursor:grabbing; box-shadow:0 0 0 6px rgba(91,195,235,0.6); transition:none; }
+.pdlbl { pointer-events:none; font-size:8px; line-height:1; text-align:center; padding:1px; }
+
+.dc0{border-color:#5bc3eb;color:#5bc3eb;background:rgba(91,195,235,0.18);}
+.dc1{border-color:#3dd68c;color:#3dd68c;background:rgba(61,214,140,0.18);}
+.dc2{border-color:#f5a623;color:#f5a623;background:rgba(245,166,35,0.18);}
+.dc3{border-color:#e84b4b;color:#e84b4b;background:rgba(232,75,75,0.18);}
+.dc4{border-color:#b06cf5;color:#b06cf5;background:rgba(176,108,245,0.18);}
+.mc0{background:#5bc3eb;}.mc1{background:#3dd68c;}.mc2{background:#f5a623;}.mc3{background:#e84b4b;}.mc4{background:#b06cf5;}
+
+/* RIGHT */
+.panel-right { background:var(--navy2); border-left:0.5px solid var(--border); display:flex; flex-direction:column; height:100vh; overflow:hidden; }
+.panel-right .phdr { display:flex; align-items:center; justify-content:space-between; }
+.poslist { flex:1; overflow-y:auto; padding:7px; min-height:0; }
+.pcard { background:rgba(0,0,0,0.22); border:0.5px solid var(--border); border-radius:7px; padding:9px 11px; margin-bottom:7px; cursor:pointer; transition:border-color .1s; }
+.pcard:hover { border-color:rgba(91,195,235,0.35); }
+.pcard.active { border-color:var(--blue); background:rgba(91,195,235,0.06); }
+.pcard-hdr { display:flex; align-items:center; gap:7px; margin-bottom:9px; }
+.pmini { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.plbl { flex:1; background:transparent; border:none; border-bottom:0.5px solid var(--border); color:var(--white); font-family:var(--font); font-size:12px; font-weight:600; outline:none; padding-bottom:2px; }
+.plbl:focus { border-bottom-color:var(--blue); color:var(--blue); }
+.pdel { background:transparent; border:none; color:var(--muted); cursor:pointer; font-size:12px; padding:2px 5px; border-radius:3px; transition:all .1s; }
+.pdel:hover { color:var(--red); background:rgba(232,75,75,0.1); }
+.pcoords { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:9px; }
+.cf { display:flex; flex-direction:column; gap:2px; }
+.cl { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+.cv { font-family:monospace; font-size:11px; color:var(--blue); background:rgba(0,0,0,0.3); padding:3px 7px; border-radius:4px; border:0.5px solid var(--border); }
+.srow { display:flex; align-items:center; gap:7px; }
+.sl { font-size:10px; color:var(--muted); flex-shrink:0; white-space:nowrap; }
+.sslider { flex:1; min-width:0; -webkit-appearance:none; appearance:none; height:4px; border-radius:2px; background:rgba(91,195,235,0.22); outline:none; cursor:pointer; }
+.sslider::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--blue); cursor:pointer; border:2px solid var(--navy2); }
+.sslider::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background:var(--blue); cursor:pointer; border:2px solid var(--navy2); }
+.sval { font-size:10px; font-family:monospace; color:var(--blue); min-width:30px; text-align:right; flex-shrink:0; }
+
+.addbt { display:flex; align-items:center; justify-content:center; width:calc(100% - 14px); margin:0 7px 7px; padding:7px; background:transparent; border:0.5px dashed rgba(91,195,235,0.22); border-radius:6px; color:var(--muted); font-family:var(--font); font-size:11px; cursor:pointer; transition:all .1s; flex-shrink:0; }
+.addbt:hover { border-color:var(--blue); color:var(--blue); }
+
+.instruct { background:rgba(91,195,235,0.04); border:0.5px solid var(--border); border-radius:5px; padding:8px 10px; margin:7px; font-size:10px; color:var(--muted); line-height:1.7; flex-shrink:0; }
+.instruct b { color:var(--white); }
+.kb { display:inline-block; background:rgba(0,0,0,0.4); border:0.5px solid var(--border); border-radius:3px; padding:1px 4px; font-family:monospace; font-size:9px; color:var(--blue); }
+
+/* OUTPUT */
+.outwrap { flex-shrink:0; border-top:0.5px solid var(--border); background:rgba(0,0,0,0.18); }
+.otabs { display:flex; border-bottom:0.5px solid var(--border); }
+.otab { flex:1; padding:6px; font-size:10px; font-weight:600; font-family:var(--font); text-transform:uppercase; letter-spacing:1px; cursor:pointer; background:transparent; border:none; color:var(--muted); transition:all .1s; }
+.otab.active { color:var(--blue); border-bottom:1.5px solid var(--blue); }
+.opane { display:none; padding:9px 11px; }
+.opane.active { display:block; }
+.obox { background:rgba(0,0,0,0.42); border:0.5px solid var(--border); border-radius:5px; padding:8px 9px; font-family:monospace; font-size:9px; color:#7aaccc; max-height:88px; overflow-y:auto; white-space:pre-wrap; word-break:break-all; line-height:1.55; }
+.cpbtn { width:100%; margin-top:6px; padding:6px; border-radius:5px; font-family:var(--font); font-size:11px; font-weight:600; cursor:pointer; transition:all .1s; border:0.5px solid; }
+.cpbtn.s { background:rgba(91,195,235,0.09); border-color:var(--blue); color:var(--blue); }
+.cpbtn.a { background:rgba(61,214,140,0.09); border-color:var(--green); color:var(--green); }
+.cpbtn.ok { background:rgba(61,214,140,0.15) !important; border-color:var(--green) !important; color:var(--green) !important; }
+.nop { text-align:center; padding:28px 14px; color:var(--muted); font-size:11px; }
+::-webkit-scrollbar{width:4px;height:4px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:rgba(91,195,235,0.18);border-radius:2px;}
+
+/* image loading state */
+.img-loading { display:flex; align-items:center; justify-content:center; height:100%; color:var(--muted); font-size:12px; gap:10px; }
+.spinner { width:20px; height:20px; border:2px solid var(--border); border-top-color:var(--blue); border-radius:50%; animation:spin .7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="panel-left">
+    <div class="phdr">
+      <h2>Products</h2>
+      <p>Click any product — front &amp; back images load automatically.</p>
+    </div>
+    <div class="plist" id="plist"></div>
+  </div>
+
+  <div class="canvas-area">
+    <div class="ctb">
+      <div>
+        <div class="ctb-name" id="tbName">Select a product</div>
+        <div class="ctb-sub" id="tbSub">—</div>
+      </div>
+      <div class="sp"></div>
+      <button class="btn btn-view active" id="btnFront" onclick="switchView('front')" style="display:none">↑ Front</button>
+      <button class="btn btn-view" id="btnBack" onclick="switchView('back')" style="display:none">↓ Back</button>
+      <button class="btn btn-undo" id="undoBtn" onclick="undo()" disabled>↩ Undo</button>
+      <span class="undo-ct" id="undoCt"></span>
+    </div>
+    <div class="cwrap" id="cwrap">
+      <div class="chint"><div class="big">⊕</div><p>Select a product to begin</p></div>
+    </div>
+  </div>
+
+  <div class="panel-right">
+    <div class="phdr">
+      <h2>Positions</h2>
+      <button class="btn btn-ghost" style="font-size:10px;padding:3px 9px;" onclick="clearAll()">Clear all</button>
+    </div>
+    <div class="instruct">
+      <b>Click</b> garment to place &nbsp;·&nbsp; <b>Drag</b> dot to reposition &nbsp;·&nbsp; resize with slider below &nbsp;·&nbsp; <span class="kb">Ctrl Z</span> undo &nbsp;·&nbsp; <span class="kb">Del</span> remove selected
+    </div>
+    <div class="poslist" id="poslist"><div class="nop">Select a product to start</div></div>
+    <button class="addbt" id="addbt" style="display:none" onclick="addManual()">+ Add position at centre</button>
+    <div class="outwrap">
+      <div class="otabs">
+        <button class="otab active" onclick="switchTab('s',this)">This product</button>
+        <button class="otab" onclick="switchTab('a',this)">All products</button>
+      </div>
+      <div class="opane active" id="pane-s">
+        <div class="obox" id="out-s">Select a product.</div>
+        <button class="cpbtn s" onclick="copyOut('s',this)">Copy JSON</button>
+      </div>
+      <div class="opane" id="pane-a">
+        <div class="obox" id="out-a">Calibrate at least one product.</div>
+        <button class="cpbtn a" onclick="copyOut('a',this)">Copy all to clipboard</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const BASE = 'https://store-9ong3twjo7.mybigcommerce.com/content/02%20-%20Ralawise%20Image%20%28Do%20not%20use%29/';
+
+const PRODUCTS = [
+  {code:'JC001',name:'Active Tee (Adult)',   tmpl:'tshirt', colour:'Arctic White',  front:BASE+'JC001/JC001_ArcticWhite_FRONT.jpg',   back:BASE+'JC001/JC001_ArcticWhite_BACK.jpg'},
+  {code:'SX701',name:'Casual Tee (Adult)',   tmpl:'tshirt', colour:'Anthracite',    front:BASE+'SX701/SX701_Anthracite_FRONT.jpg',     back:BASE+'SX701/SX701_Anthracite_BACK.jpg'},
+  {code:'JC01J',name:'Active Tee (Junior)',  tmpl:'tshirt', colour:'Bottle Green',  front:BASE+'JC01J/JC01J_BottleGreen_FRONT.JPG',   back:BASE+'JC01J/JC01J_BottleGreen_BACK.jpg'},
+  {code:'SX702',name:'Casual Tee (Junior)',  tmpl:'tshirt', colour:'Blue Soul',     front:BASE+'SX702/SX702_BlueSoul_FRONT.jpg',       back:BASE+'SX702/SX702_BlueSoul_BACK.jpg'},
+  {code:'JH001',name:'Casual Hoodie (Adult)',tmpl:'hoodie', colour:'Arctic White',  front:BASE+'JH001/JH001_ArcticWhite_FRONT.jpg',   back:BASE+'JH001/JH001_ArcticWhite_BACK.jpg'},
+  {code:'JH006',name:'Active Hoodie (Adult)',tmpl:'hoodie', colour:'Jet Black',     front:BASE+'JH006/JH006_JetBlack_FRONT.jpg',       back:BASE+'JH006/JH006_JetBlack_BACK.jpg'},
+  {code:'JH01J',name:'Casual Hoodie (Junior)',tmpl:'hoodie',colour:'Ash',           front:BASE+'JH01J/JH01J_Ash_FRONT.jpg',           back:BASE+'JH01J/JH01J_Ash_BACK.jpg'},
+  {code:'JH06J',name:'Active Hoodie (Junior)',tmpl:'hoodie',colour:'Jet Black',     front:BASE+'JH06J/JH06J_JetBlack_FRONT.jpg',      back:null},
+  {code:'JH030',name:'Casual Sweater (Adult)',tmpl:'hoodie',colour:'Arctic White',  front:BASE+'JH030/JH030_ArcticWhite_FRONT.jpg',   back:BASE+'JH030/JH030_ArcticWhite_BACK.jpg'},
+  {code:'JH30J',name:'Casual Sweater (Junior)',tmpl:'hoodie',colour:'Kelly Green',  front:BASE+'JH30J/JH30J_KellyGreen_FT.jpg',       back:null},
+  {code:'AQ015',name:'Casual Polo (Adult)',  tmpl:'polo',   colour:'Black',         front:BASE+'AQ015/AQ015_Black_FRONT.jpg',         back:BASE+'AQ015/AQ015_Black_BACK.jpg'},
+  {code:'JC040',name:'Active Polo (Adult)',  tmpl:'polo',   colour:'Arctic White',  front:BASE+'JC040/JC040_ArcticWhite_FRONT.jpg',   back:BASE+'JC040/JC040_ArcticWhite_BACK.jpg'},
+  {code:'JC40J',name:'Active Polo (Junior)', tmpl:'polo',   colour:'Bottle Green',  front:BASE+'JC40J/JC40J_BottleGreen_FT.jpg',     back:null},
+  {code:'BC015',name:'Basic Cap',            tmpl:'cap',    colour:'Black',         front:BASE+'BC015/BC015_Black_FRONT.jpg',         back:BASE+'BC015/BC015_Black_BACK.jpg'},
+  {code:'YP004',name:'Flexfit Cap',          tmpl:'cap',    colour:'Black',         front:BASE+'YP004/YP004_Black_FT.jpg',            back:null},
+  {code:'BC446',name:'Beanie',               tmpl:'beanie', colour:'Bottle Green',  front:BASE+'BC446/BC446_BottleGreen_FT.jpg',      back:null},
+  {code:'BG212',name:'Backpack',             tmpl:'bag',    colour:'Black',         front:BASE+'BG212/BG212_Black_FRONT.jpg',         back:BASE+'BG212/BG212_Black_BACK.jpg'},
+];
+
+const DC = ['dc0','dc1','dc2','dc3','dc4'];
+const MC = ['mc0','mc1','mc2','mc3','mc4'];
+const DLBLS = ['Left Breast','Right Breast','Back Centre','Front Centre','Hood','Side Left','Sleeve'];
+
+// State per product: positions indexed by view ('front'|'back')
+// calibData[code] = { front:[...], back:[...] }
+let calibData = {};
+let undoStack = {};
+let currentCode = null;
+let currentView = 'front';   // 'front' | 'back'
+let selectedIdx = null;
+let dragState = null;
+
+/* ── INIT ── */
+function init() {
+  const list = document.getElementById('plist');
+  PRODUCTS.forEach(p => {
+    const d = document.createElement('div');
+    d.className = 'pitem'; d.id = 'pi-'+p.code;
+    d.onclick = () => selectProduct(p.code);
+    d.innerHTML = `<span class="pcode">${p.code}</span><span class="pname">${p.name}</span><span class="pcount none" id="pc-${p.code}">—</span>`;
+    list.appendChild(d);
+  });
+  document.addEventListener('keydown', handleKey);
+}
+
+/* ── SELECT PRODUCT ── */
+function selectProduct(code) {
+  currentCode = code;
+  selectedIdx = null;
+  currentView = 'front';
+  document.querySelectorAll('.pitem').forEach(e => e.classList.remove('active'));
+  document.getElementById('pi-'+code).classList.add('active');
+  const p = PRODUCTS.find(x => x.code === code);
+  document.getElementById('tbName').textContent = p.name;
+  document.getElementById('tbSub').textContent = p.code + ' · ' + p.colour + ' · ' + p.tmpl;
+  document.getElementById('addbt').style.display = '';
+
+  if (!calibData[code]) calibData[code] = { front:[], back:[] };
+  if (!undoStack[code]) undoStack[code] = [];
+
+  // Show front/back toggle buttons
+  const bf = document.getElementById('btnFront');
+  const bb = document.getElementById('btnBack');
+  bf.style.display = '';
+  bb.style.display = p.back ? '' : 'none';
+  bf.classList.add('active'); bb.classList.remove('active');
+
+  loadViewImage(p, 'front');
+  renderPositions();
+  updateOutput();
+  updateUndoBtn();
+}
+
+/* ── VIEW TOGGLE ── */
+function switchView(view) {
+  if (!currentCode) return;
+  currentView = view;
+  selectedIdx = null;
+  document.getElementById('btnFront').classList.toggle('active', view === 'front');
+  document.getElementById('btnBack').classList.toggle('active', view === 'back');
+  const p = PRODUCTS.find(x => x.code === currentCode);
+  loadViewImage(p, view);
+  renderPositions();
+}
+
+/* ── LOAD IMAGE ── */
+function loadViewImage(p, view) {
+  const url = view === 'front' ? p.front : p.back;
+  const wrap = document.getElementById('cwrap');
+  if (!url) {
+    wrap.innerHTML = '<div class="chint"><p style="color:var(--muted)">No ' + view + ' image available</p></div>';
+    return;
+  }
+  wrap.innerHTML = '<div class="img-loading"><div class="spinner"></div><span>Loading ' + view + ' image…</span></div>';
+  const container = document.createElement('div');
+  container.className = 'imgc'; container.id = 'imgc';
+  const img = document.createElement('img');
+  img.src = url; img.draggable = false;
+  container.appendChild(img);
+  img.onload = () => {
+    wrap.innerHTML = '';
+    wrap.appendChild(container);
+    container.addEventListener('mousedown', onMouseDown);
+    renderDots();
+  };
+  img.onerror = () => {
+    wrap.innerHTML = '<div class="chint"><p style="color:var(--red)">Image failed to load — check network / CORS</p></div>';
+  };
+}
+
+/* ── MOUSE: place + drag ── */
+function onMouseDown(e) {
+  if (!currentCode) return;
+  const container = document.getElementById('imgc');
+  const img = container.querySelector('img');
+  const imgRect = img.getBoundingClientRect();
+  const dotEl = e.target.closest('.pos-dot');
+
+  if (dotEl) {
+    const idx = parseInt(dotEl.dataset.idx);
+    selectedIdx = idx;
+    renderDots(); renderPositions();
+    const pos = calibData[currentCode][currentView][idx];
+    dragState = { idx, startMouseX:e.clientX, startMouseY:e.clientY,
+      startTop:parseFloat(pos.top), startLeft:parseFloat(pos.left), moved:false };
+    dotEl.classList.add('dragging');
+    e.preventDefault(); e.stopPropagation();
+
+    function onMove(ev) {
+      if (!dragState) return;
+      const r = img.getBoundingClientRect();
+      const dx = ev.clientX - dragState.startMouseX;
+      const dy = ev.clientY - dragState.startMouseY;
+      if (Math.abs(dx)>2||Math.abs(dy)>2) dragState.moved = true;
+      const nt = Math.max(0,Math.min(100, dragState.startTop  + dy/r.height*100)).toFixed(1);
+      const nl = Math.max(0,Math.min(100, dragState.startLeft + dx/r.width *100)).toFixed(1);
+      calibData[currentCode][currentView][dragState.idx].top  = nt+'%';
+      calibData[currentCode][currentView][dragState.idx].left = nl+'%';
+      container.querySelectorAll('.pos-dot').forEach(d => {
+        if (parseInt(d.dataset.idx)===dragState.idx) { d.style.top=nt+'%'; d.style.left=nl+'%'; }
+      });
+      const ct=document.getElementById('ct-'+dragState.idx); const cl=document.getElementById('cl-'+dragState.idx);
+      if(ct) ct.textContent=nt+'%'; if(cl) cl.textContent=nl+'%';
+      updateOutput();
+    }
+    function onUp() {
+      if (dragState?.moved) pushUndo();
+      container.querySelectorAll('.pos-dot').forEach(d=>d.classList.remove('dragging'));
+      dragState = null;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    return;
+  }
+
+  // Place
+  const x = e.clientX - imgRect.left;
+  const y = e.clientY - imgRect.top;
+  if (x<0||y<0||x>imgRect.width||y>imgRect.height) return;
+  pushUndo();
+  const positions = calibData[currentCode][currentView];
+  const idx = positions.length;
+  positions.push({ id:'pos_'+idx, label:DLBLS[idx]||'Position '+(idx+1),
+    top:((y/imgRect.height)*100).toFixed(1)+'%', left:((x/imgRect.width)*100).toFixed(1)+'%', size:56 });
+  selectedIdx = idx;
+  renderDots(); renderPositions(); updateOutput(); updateCount(currentCode);
+}
+
+/* ── DOTS ── */
+function renderDots() {
+  if (!currentCode) return;
+  const container = document.getElementById('imgc');
+  if (!container) return;
+  container.querySelectorAll('.pos-dot').forEach(d=>d.remove());
+  (calibData[currentCode][currentView]||[]).forEach((pos,idx) => {
+    const dot = document.createElement('div');
+    dot.className='pos-dot '+DC[idx%DC.length]+(selectedIdx===idx?' selected':'');
+    dot.style.top=pos.top; dot.style.left=pos.left;
+    dot.style.width=pos.size+'px'; dot.style.height=pos.size+'px';
+    dot.dataset.idx=idx;
+    const inner=document.createElement('div'); inner.className='pdlbl';
+    inner.textContent=pos.label.split(' ').map(w=>w[0]).join('').substring(0,3);
+    dot.appendChild(inner); container.appendChild(dot);
+  });
+}
+
+/* ── RIGHT PANEL ── */
+function renderPositions() {
+  const list = document.getElementById('poslist');
+  if (!currentCode) { list.innerHTML='<div class="nop">Select a product to start</div>'; return; }
+  const positions = calibData[currentCode][currentView]||[];
+  if (!positions.length) { list.innerHTML='<div class="nop">Click the garment to place a marker</div>'; return; }
+  list.innerHTML='';
+  positions.forEach((pos,idx) => {
+    const card=document.createElement('div');
+    card.className='pcard'+(selectedIdx===idx?' active':'');
+    card.onclick=()=>{ selectedIdx=idx; renderDots(); renderPositions(); };
+    card.innerHTML=`
+      <div class="pcard-hdr">
+        <div class="pmini ${MC[idx%MC.length]}"></div>
+        <input class="plbl" value="${pos.label}" onchange="updateLabel(${idx},this.value)" onclick="event.stopPropagation()" placeholder="Name">
+        <button class="pdel" onclick="deletePos(${idx},event)">✕</button>
+      </div>
+      <div class="pcoords">
+        <div class="cf"><span class="cl">Top</span><span class="cv" id="ct-${idx}">${pos.top}</span></div>
+        <div class="cf"><span class="cl">Left</span><span class="cv" id="cl-${idx}">${pos.left}</span></div>
+      </div>
+      <div class="srow">
+        <span class="sl">Logo size</span>
+        <input class="sslider" type="range" min="20" max="140" step="2" value="${pos.size}"
+          oninput="updateSize(${idx},this.value)" onmouseup="pushUndo()" onclick="event.stopPropagation()">
+        <span class="sval" id="sv-${idx}">${pos.size}px</span>
+      </div>`;
+    list.appendChild(card);
+  });
+}
+
+/* ── MUTATIONS ── */
+function updateLabel(idx,val) {
+  if (!currentCode) return;
+  pushUndo();
+  const pos=calibData[currentCode][currentView][idx];
+  pos.label=val; pos.id=val.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+  renderDots(); updateOutput();
+}
+function updateSize(idx,val) {
+  if (!currentCode) return;
+  const sz=parseInt(val);
+  calibData[currentCode][currentView][idx].size=sz;
+  document.querySelectorAll('.pos-dot').forEach(d=>{ if(parseInt(d.dataset.idx)===idx){d.style.width=sz+'px';d.style.height=sz+'px';} });
+  const sv=document.getElementById('sv-'+idx); if(sv) sv.textContent=sz+'px';
+  updateOutput();
+}
+function deletePos(idx,e) {
+  e.stopPropagation(); if (!currentCode) return;
+  pushUndo();
+  calibData[currentCode][currentView].splice(idx,1);
+  if (selectedIdx!==null&&selectedIdx>=calibData[currentCode][currentView].length) selectedIdx=null;
+  renderDots(); renderPositions(); updateOutput(); updateCount(currentCode);
+}
+function clearAll() {
+  if (!currentCode||!calibData[currentCode][currentView].length) return;
+  if (!confirm('Clear all '+currentView+' positions for this product?')) return;
+  pushUndo();
+  calibData[currentCode][currentView]=[];
+  selectedIdx=null;
+  renderDots(); renderPositions(); updateOutput(); updateCount(currentCode);
+}
+function addManual() {
+  if (!currentCode) return;
+  pushUndo();
+  const positions=calibData[currentCode][currentView];
+  const idx=positions.length;
+  positions.push({id:'pos_'+idx,label:DLBLS[idx]||'Position '+(idx+1),top:'50%',left:'50%',size:56});
+  selectedIdx=idx;
+  renderDots(); renderPositions(); updateOutput(); updateCount(currentCode);
+}
+
+/* ── UNDO ── */
+function pushUndo() {
+  if (!currentCode) return;
+  if (!undoStack[currentCode]) undoStack[currentCode]=[];
+  undoStack[currentCode].push(JSON.stringify(calibData[currentCode]));
+  if (undoStack[currentCode].length>50) undoStack[currentCode].shift();
+  updateUndoBtn();
+}
+function undo() {
+  if (!currentCode) return;
+  const stack=undoStack[currentCode];
+  if (!stack||!stack.length) return;
+  calibData[currentCode]=JSON.parse(stack.pop());
+  const vp=calibData[currentCode][currentView]||[];
+  if (selectedIdx!==null&&selectedIdx>=vp.length) selectedIdx=null;
+  renderDots(); renderPositions(); updateOutput(); updateCount(currentCode); updateUndoBtn();
+}
+function updateUndoBtn() {
+  const n=currentCode?(undoStack[currentCode]?.length||0):0;
+  document.getElementById('undoBtn').disabled=n===0;
+  document.getElementById('undoCt').textContent=n>0?n+' step'+(n>1?'s':''):'';
+}
+
+/* ── KEYBOARD ── */
+function handleKey(e) {
+  if (e.target.tagName==='INPUT') return;
+  if ((e.ctrlKey||e.metaKey)&&e.key==='z') { e.preventDefault(); undo(); return; }
+  if ((e.key==='Delete'||e.key==='Backspace')&&selectedIdx!==null&&currentCode)
+    deletePos(selectedIdx,{stopPropagation:()=>{}});
+}
+
+/* ── OUTPUT ── */
+function updateOutput() {
+  if (!currentCode) return;
+  // Per-product output includes both front + back keyed separately
+  const d = calibData[currentCode];
+  const obj = { front: d.front.map(p=>({id:p.id,label:p.label,top:p.top,left:p.left,size:p.size})),
+                back:  d.back.map(p=>({id:p.id,label:p.label,top:p.top,left:p.left,size:p.size})) };
+  document.getElementById('out-s').textContent = JSON.stringify(obj,null,2);
+
+  const all={};
+  PRODUCTS.forEach(p=>{
+    const cd=calibData[p.code];
+    if (!cd) return;
+    const has = (cd.front&&cd.front.length)||(cd.back&&cd.back.length);
+    if (has) all[p.code]={
+      front:(cd.front||[]).map(x=>({id:x.id,label:x.label,top:x.top,left:x.left,size:x.size})),
+      back: (cd.back ||[]).map(x=>({id:x.id,label:x.label,top:x.top,left:x.left,size:x.size}))
+    };
+  });
+  document.getElementById('out-a').textContent = Object.keys(all).length
+    ? 'const PRODUCT_POSITIONS = '+JSON.stringify(all,null,2)+';'
+    : 'Calibrate at least one product.';
+}
+
+function updateCount(code) {
+  const el=document.getElementById('pc-'+code); if(!el) return;
+  const d=calibData[code]||{front:[],back:[]};
+  const n=(d.front||[]).length+(d.back||[]).length;
+  el.textContent=n>0?n+' pos':'—'; el.className='pcount'+(n>0?'':' none');
+}
+
+/* ── TABS ── */
+function switchTab(t,btn) {
+  document.querySelectorAll('.otab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.opane').forEach(x=>x.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pane-'+t).classList.add('active');
+}
+function copyOut(t,btn) {
+  const text=document.getElementById('out-'+t).textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    const orig=btn.textContent; btn.textContent='Copied ✓'; btn.classList.add('ok');
+    setTimeout(()=>{ btn.textContent=orig; btn.classList.remove('ok'); },2000);
+  });
+}
+
+init();
+</script>
+</body>
+</html>
