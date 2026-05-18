@@ -465,7 +465,7 @@ Outstanding Tasks
 
 🔴 Critical (blocks go-live)
 
-1. Calibrate logo position coordinates Use nx_calibrator.html with real product imagery showing correct logo placements. Export the PRODUCT_POSITIONS JSON and paste it back to Claude to wire into the form's POS_TEMPLATES. This replaces the current placeholder coordinates which are known to be wrong.
+1. Calibrate logo position coordinates Use the calibrators with real product imagery showing correct logo placements. nxt_calibrator.html does one reference image per product; nxt_calibrator_v2.html does every colour variant (seeded from the current reference, nudge per image) and outputs PRODUCT_POSITIONS_BY_COLOUR (code → colour → front/back). Wiring the order form to consume per-colour positions (key PRODUCT_POSITIONS by colour with a fallback) is a deferred follow-up — not done yet.
 
 2. Re-add Zapier webhook URL Generate a fresh webhook URL in Zapier (the old one is compromised). Add it to handleSubmit() in the order form.
 
@@ -607,5 +607,11 @@ May 2026
 Claude
 
 Pricing fix: Left Breast / Front Panel are now classed as small logos (added to SMALL_POS_KEYS). Previously they were a separate free base logo on top of the free first small, so Left + Right Breast incurred no charge. Now the single free-small allowance covers the main logo and the second breast logo is correctly +£2.50.
+
+May 2026
+
+Claude
+
+Added nxt_calibrator_v2.html — per-colour calibrator. Driven by the order form's PRODUCT_IMAGES manifest (17 products, 211 colours, ~422 front/back images); every colour seeded from the current PRODUCT_POSITIONS reference, manual nudge per image, colour stepper, progress counts, "apply to all colours" accelerator. Outputs PRODUCT_POSITIONS_BY_COLOUR (code → colour → front/back). Order-form wiring to consume per-colour positions is a deferred follow-up.
 
 Update this table whenever a significant change is made to either file.
