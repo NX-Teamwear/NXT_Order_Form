@@ -325,7 +325,7 @@ syncLineBranding(uid) — rebuilds line.positions (price-bucket keys) from the p
 previewPriceBarHTML(line) — the per-card price bar; lineBrandingDetails(line) — placed positions with kind/file/text/font/notes for the order payload & email
 brandingKey(label) — normalises a position label to its price-bucket key; esc() — HTML-escapes user-supplied strings
 
-Preview position coordinates are per colour: PRODUCT_POSITIONS_BY_COLOUR (code → colour → front/back) holds the calibrated values; getProductPositions(code, colour) returns the colour's set, falling back to the single-set PRODUCT_POSITIONS reference (used by JH06J/BC015/BG212 — "no change" — and any uncalibrated colour). getPositions(code, colour, view) is the accessor used throughout the preview. Each position is { id, label, top, left, size } as percentages of the image box.
+Preview position coordinates are per colour: PRODUCT_POSITIONS_BY_COLOUR (code → colour → front/back) holds the calibrated values; getProductPositions(code, colour) returns the colour's set, falling back to the single-set PRODUCT_POSITIONS reference (used by JH06J/JH30J/BC015/BG212 — "no change" — and any uncalibrated colour). getPositions(code, colour, view) is the accessor used throughout the preview. Each position is { id, label, top, left, size } as percentages of the image box.
 
 ⚠️ Per-colour coordinates were calibrated with nxt_calibrator_v2.html and wired in; still worth a visual spot-check across colours before go-live — see Outstanding Tasks.
 
@@ -465,7 +465,7 @@ Outstanding Tasks
 
 🔴 Critical (blocks go-live)
 
-1. Calibrate logo position coordinates DONE (May 2026) — per-colour coordinates calibrated in nxt_calibrator_v2.html and wired into the order form as PRODUCT_POSITIONS_BY_COLOUR (14 products / 196 colours). JH06J, BC015, BG212 ("no change needed") and any uncalibrated colour fall back to the single-set PRODUCT_POSITIONS reference via getProductPositions(). Remaining: a visual spot-check across colour variants before go-live, and per-colour calibration of JH06J/BC015/BG212 if their variants ever need it.
+1. Calibrate logo position coordinates DONE (May 2026) — per-colour coordinates calibrated in nxt_calibrator_v2.html and wired into the order form as PRODUCT_POSITIONS_BY_COLOUR (13 products / 182 colours). JH06J, JH30J, BC015, BG212 (positions identical across colours — "no change needed") and any uncalibrated colour fall back to the single-set PRODUCT_POSITIONS reference via getProductPositions(). Remaining: a visual spot-check across colour variants before go-live, and per-colour calibration of the reference-only products if their variants ever need it.
 
 2. Webhook DONE (May 2026) — submitForm() POSTs multipart/form-data to a Zoho Flow webhook (ZOHO_WEBHOOK_URL). Remaining hardening (optional, before/at launch): the zapikey is exposed in page source, so consider a honeypot field and/or proxying via a Cloudflare Worker to curb spam; and confirm Zoho Flow's payload-size limit is comfortable for multiple large artwork files.
 
@@ -625,5 +625,11 @@ May 2026
 Claude
 
 Wired submission to a Zoho Flow webhook. submitForm() now POSTs multipart/form-data (hybrid: flat contact/delivery/total fields + email_summary + order_json + deduped placed-logo file parts file1..N with an attachments manifest) via mode:'no-cors', fire-and-forget (network error → #submitErr, button re-enabled). Added ZOHO_WEBHOOK_URL + collectPlacedFiles(). zapikey is exposed in page source — hardening (honeypot / Worker proxy) noted as optional follow-up.
+
+May 2026
+
+Claude
+
+Removed JH30J from PRODUCT_POSITIONS_BY_COLOUR (14→13 products). JH30J's logo positions are identical across all colours, so it now uses the single-set PRODUCT_POSITIONS reference (front + back). Fixes its back view not showing: back images existed but the empty per-colour back array was shadowing the reference's back positions (Shoulders/Upper Back/Tail), so hasBack was false. No fallback-logic change.
 
 Update this table whenever a significant change is made to either file.
