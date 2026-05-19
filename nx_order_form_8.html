@@ -1552,11 +1552,81 @@ function buildEmailSummary() {
 }
 
 /* ════════════════════════════════════════════════
-   SUBMISSION — shows success screen (backend to be wired at launch)
+   SUBMISSION — POSTs multipart/form-data to Zoho Flow
+   (flat fields + email_summary + order_json + placed
+   logo files). Fire-and-forget: cross-origin webhook
+   responses can't be read, so we show success unless
+   the request itself fails (network error).
+   NOTE: the zapikey below is visible in page source.
 ════════════════════════════════════════════════ */
-function submitForm() {
+const ZOHO_WEBHOOK_URL = 'https://flow.zoho.eu/20106731536/flow/webhook/incoming?zapikey=1001.735db8b7b8ab98a0ed2bf6fa54822b9b.228a511d143d57fc8a2945dd8630a764&isdebug=false';
+
+// Deduped artwork files actually placed on a position, with a
+// manifest of where each is used (product / colour / position).
+function collectPlacedFiles() {
+  const byLogo = {};
+  lines.forEach(line => {
+    const ps  = getPreviewState(line.uid);
+    const idx = posIndexForLine(line);
+    const backPos = (getProductPositions(line.code, line.colour).back) || [];
+    Object.entries(ps.placements || {}).forEach(([posId, pl]) => {
+      const logo = getLogoById(pl && pl.id);
+      if (!logo || logo.kind !== 'file' || !logo.file) return;
+      const pos = idx[posId];
+      if (!byLogo[logo.id]) byLogo[logo.id] = { file: logo.file, file_name: logo.label, used_on: [] };
+      byLogo[logo.id].used_on.push({
+        product_code: line.code,
+        colour:       line.colour,
+        position:     pos ? prettyLabel(pos.label) : posId,
+        view:         backPos.some(b => b.id === posId) ? 'back' : 'front'
+      });
+    });
+  });
+  return Object.keys(byLogo).map((id, i) => ({
+    field:     'file' + (i + 1),
+    file:      byLogo[id].file,
+    file_name: byLogo[id].file_name,
+    used_on:   byLogo[id].used_on
+  }));
+}
+
+const FLAT_FIELDS = [
+  'submitted_at','submitted_at_uk','form_version',
+  'first_name','last_name','full_name','club','email','phone',
+  'address_line1','address_line2','city','postcode','notes',
+  'total_items','estimated_total','wants_personalisation'
+];
+
+async function submitForm() {
   if (!validateContact()) return;
-  showSuccess();
+  const btn = document.getElementById('submitBtn');
+  const errBox = document.getElementById('submitErr');
+  errBox.classList.remove('show');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  try {
+    const payload = buildPayload();
+    const placed  = collectPlacedFiles();
+    payload.attachments = placed.map(f => ({ field: f.field, file_name: f.file_name, used_on: f.used_on }));
+
+    const fd = new FormData();
+    FLAT_FIELDS.forEach(k => fd.append(k, String(payload[k])));
+    fd.append('email_summary', payload.email_summary);
+    fd.append('order_json', JSON.stringify(payload));
+    fd.append('attachment_count', String(placed.length));
+    placed.forEach(f => fd.append(f.field, f.file, f.file_name));
+
+    // no-cors: request is sent; we can't read Zoho's reply, so a
+    // resolved promise = delivered, a thrown error = network failure.
+    await fetch(ZOHO_WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: fd });
+    showSuccess();
+  } catch (e) {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    errBox.classList.add('show');
+    errBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 
 function showSuccess() {

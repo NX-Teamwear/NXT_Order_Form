@@ -17,7 +17,7 @@ Phase 1 — Independent Form (current build)
 A standalone form that operates completely outside BigCommerce checkout. The customer journey:
 
 Customer fills in the order form — products, colours, logo positions, sizes, personalisation, contact details
-Form submits to the NX team by email (via Zapier webhook)
+Form submits to the NX team by email (via Zoho Flow webhook)
 Katie or Freddie manually adds the products to BigCommerce and creates a payment link
 Customer receives the payment link, reviews products and sizes in BigCommerce, and pays
 NX team produces a digital mockup, gets customer approval, then places the order with Ralawise
@@ -414,7 +414,7 @@ Single HTML file — no build system, no npm, no dependencies. The entire form i
 
 No payment in the form — customers receive a payment link separately after approving the mockup. The form is purely for capturing the order details.
 
-Submission via Zapier webhook — the form POSTs order data as JSON to a Zapier webhook which emails the NX team. The webhook URL was removed from the form during development and must be re-added before launch. Generate a fresh webhook URL — the old one was exposed in chat and should be considered compromised.
+Submission via Zoho Flow webhook — submitForm() POSTs multipart/form-data to a Zoho Flow incoming webhook (ZOHO_WEBHOOK_URL const). Hybrid shape: flat top-level fields (contact/delivery/totals) + email_summary (human-readable) + order_json (full structured order) + the placed logo files as file parts (file1..fileN, deduped; manifest in order_json.attachments). Fire-and-forget with mode:'no-cors' — cross-origin webhook responses can't be read, so success shows unless the request itself throws (network error → #submitErr). Only files actually placed on a position are attached; text logos travel in the JSON/summary. Heads-up: the zapikey is in the URL and visible in page source (spam risk) — a honeypot or Cloudflare-Worker proxy can harden this later.
 
 File uploads not yet wired — the preview's "+ Upload logo" control captures the file object and filename in memory, but actual file transfer to storage is not implemented. Plan is Nextcloud + Cloudflare Worker. Parked until launch.
 
@@ -432,9 +432,9 @@ When the customer hits Submit on step 6:
 
 Form validates required fields
 Builds a structured JSON payload of the entire order
-POSTs to the Zapier webhook URL
+POSTs multipart/form-data (fields + placed logo files) to the Zoho Flow webhook
 Shows a success screen
-The Zapier zap routes the submission to the NX team email. Katie or Freddie then manually creates the BigCommerce products and payment link. The webhook URL needs to be added back to the form before go-live — look for handleSubmit() and the fetch() call inside it.
+The Zoho Flow webhook routes the submission to the NX team email. Katie or Freddie then manually creates the BigCommerce products and payment link. The webhook is wired in submitForm() (ZOHO_WEBHOOK_URL); collectPlacedFiles() builds the deduped attachment list.
 
 Phase 2 (future)
 
@@ -467,7 +467,7 @@ Outstanding Tasks
 
 1. Calibrate logo position coordinates DONE (May 2026) — per-colour coordinates calibrated in nxt_calibrator_v2.html and wired into the order form as PRODUCT_POSITIONS_BY_COLOUR (14 products / 196 colours). JH06J, BC015, BG212 ("no change needed") and any uncalibrated colour fall back to the single-set PRODUCT_POSITIONS reference via getProductPositions(). Remaining: a visual spot-check across colour variants before go-live, and per-colour calibration of JH06J/BC015/BG212 if their variants ever need it.
 
-2. Re-add Zapier webhook URL Generate a fresh webhook URL in Zapier (the old one is compromised). Add it to handleSubmit() in the order form.
+2. Webhook DONE (May 2026) — submitForm() POSTs multipart/form-data to a Zoho Flow webhook (ZOHO_WEBHOOK_URL). Remaining hardening (optional, before/at launch): the zapikey is exposed in page source, so consider a honeypot field and/or proxying via a Cloudflare Worker to curb spam; and confirm Zoho Flow's payload-size limit is comfortable for multiple large artwork files.
 
 🟡 Before launch
 
@@ -619,5 +619,11 @@ May 2026
 Claude
 
 Wired per-colour calibration into the order form. Added PRODUCT_POSITIONS_BY_COLOUR (14 products / 196 colours, from nxt_calibrator_v2.html) and getProductPositions(code, colour) — per-colour positions with fallback to the single-set PRODUCT_POSITIONS reference for JH06J/BC015/BG212 ("no change") and any uncalibrated colour. getPositions is now colour-aware (code, colour, view); preview/markers/pricing-sync/payload all resolve positions per selected colour.
+
+May 2026
+
+Claude
+
+Wired submission to a Zoho Flow webhook. submitForm() now POSTs multipart/form-data (hybrid: flat contact/delivery/total fields + email_summary + order_json + deduped placed-logo file parts file1..N with an attachments manifest) via mode:'no-cors', fire-and-forget (network error → #submitErr, button re-enabled). Added ZOHO_WEBHOOK_URL + collectPlacedFiles(). zapikey is exposed in page source — hardening (honeypot / Worker proxy) noted as optional follow-up.
 
 Update this table whenever a significant change is made to either file.
