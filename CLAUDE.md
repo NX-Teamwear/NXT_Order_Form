@@ -17,7 +17,7 @@ Phase 1 — Independent Form (current build)
 A standalone form that operates completely outside BigCommerce checkout. The customer journey:
 
 Customer fills in the order form — products, colours, logo positions, sizes, personalisation, contact details
-Form submits to the NX team by email (via Zapier webhook)
+Form submits to the NX team by email (via Zoho Flow webhook)
 Katie or Freddie manually adds the products to BigCommerce and creates a payment link
 Customer receives the payment link, reviews products and sizes in BigCommerce, and pays
 NX team produces a digital mockup, gets customer approval, then places the order with Ralawise
@@ -97,7 +97,7 @@ p2
 
 Branding & Preview
 
-Per line: tick logo positions, upload artwork or enter text. Live garment preview renders below with draggable position markers.
+Branding is done directly on the garment preview. Per line: pick a position marker, then place a logo on it. Logos are uploaded files (several at once) or typed text logos, each with optional colour notes. Per-product price bar and the name & number notice are shown here. Product cards render as a single vertical list.
 
 4
 
@@ -131,7 +131,7 @@ PRODUCTS array
 
 17 products. Each has:
 
-{ code, name, category, sizes, rrp, rrpLarge, rrpSmall, rrpBoth }
+{ code, name, cat, age, colours, rrp, sizes }   // rrp is the base price; per-logo fees are global constants (see Pricing)
 
 
 
@@ -249,23 +249,28 @@ Universal Backpack
 
 bag
 
-Pricing tiers
+Pricing (additive, per product line)
 
-Four tiers per product based on which logo positions are selected:
+The four hardcoded tiers (rrp/rrpSmall/rrpLarge/rrpBoth + priceTier) were removed. Price is now built up from the base:
 
-base — left breast only (free, included)
-small — + right breast, sleeve, or nape
-large — + back centre, front centre, shoulder
-both — + both small and large position types
-Tier logic lives in priceTier(positions). Price updates live as positions are ticked.
+linePrice = rrp + max(0, smallCount − FREE_SMALL_LOGOS) × SMALL_LOGO_FEE + largeCount × LARGE_LOGO_FEE
 
-LOGO_POS array
+base — product rrp (no logo charge yet)
+first small logo placed — free (FREE_SMALL_LOGOS = 1); Left Breast / Front Panel are small, so this normally covers the main logo
+each further small logo — + SMALL_LOGO_FEE (£2.50)
+each large logo — + LARGE_LOGO_FEE (£4.00)
 
-Eight logo positions. left_breast is free. All others carry a supplement:
+So Left Breast only = rrp; Left + Right Breast = rrp + £2.50; Right Breast alone = rrp (it's the free small); add a large = +£4 each. Constants live at the top of the PRICING block; logoCounts(line) tallies small/large from line.positions, logoSupplement(line) is the add-on, linePrice(line) the per-item total. Price updates live as logos are placed/cleared in the Garment Preview; the per-card price bar shows base + per-type breakdown.
 
-left_breast (free) | right_breast | sleeve | nape
+Price bucket keys
 
-back_centre | front_centre | left_shoulder | right_shoulder
+LOGO_POS was removed. Logo positions come solely from PRODUCT_POSITIONS (the calibrated preview positions). Each position a logo is placed on is classified by a normalised label key, produced by brandingKey():
+
+SMALL_POS_KEYS — leftbreast, frontpanel, rightbreast, leftsleeve, rightsleeve
+
+LARGE_POS_KEYS — centrechest, shoulders, uppermidbacknotshoulders, tail
+
+Left Breast and Front Panel are deliberately "small" so the one free-small allowance lands on the usual main logo. Anything not listed counts toward neither fee.
 
 lines array
 
@@ -279,15 +284,15 @@ The live state of the order. Each line object:
 
   colour,     // selected colour string
 
-  positions,  // array of selected logo position IDs
-
-  logoEntries,// { [posId]: { type, text, fileName, file, font } }
+  positions,  // synced branding-bucket keys for positions with a placed logo (drives pricing)
 
   sizes,      // { [sizeLabel]: qty }
 
   pers        // personalisation rows array
 
 }
+
+logoEntries was removed. Placement lives in previewState (per-uid: { activePos, placements, view, showTextForm, editLogoId }); each placement maps a position id → { id: logoId }. The shared per-card logo library is the global previewUploadedLogos array — each item is { id, kind:'file'|'text', label, notes } plus, for files, { file, src, isImage } and, for text logos, { text, font }. syncLineBranding(uid) derives line.positions from the placements; lineBrandingDetails(line) builds the per-position list (label, view, kind, file/text/font/notes) for the submitted order.
 
 PRODUCT_IMAGES
 
@@ -301,22 +306,28 @@ Images follow the pattern: {CODE}/{CODE}_{ColourName}_FRONT.jpg and _BACK.jpg. S
 
 Order Form — Branding & Preview Step (Step 3)
 
-This is the most complex step. It was originally two separate steps that were merged.
+The branding controls and the garment preview were consolidated into a single Garment Preview (May 2026). There is no longer a separate branding panel — customers brand the garment directly on the preview.
 
-Top section (branding): Per product line — logo position checkboxes, upload or text entry per position, live price bar.
+Per product line, the preview card shows: the garment image with clickable circular position markers (from PRODUCT_POSITIONS), a "Select position" + "Place logo on selected position" sidebar with the logo library and "↑ Upload logos" / "Aa Add text logo" controls, and a per-product price bar. The name & number notice is shown once at the top of the section. Product cards render as a single vertical list, one per row.
 
-Bottom section (preview): Auto-renders below the branding form. Shows the garment image with circular position markers overlaid at % coordinates. Markers update live when positions are ticked.
+A position only counts toward pricing and the submitted order once a logo has been placed on it. Each card has a shared logo library: every item is either an uploaded file (multiple selectable at once — AI/EPS/PDF/PNG/SVG, vector preferred; non-images show a type badge) or a typed text logo, and each carries an optional "Colour notes / artwork description" (plus a font field for text logos), edited via a small inline form on the tile (✎). Text logos are placeable just like images — the marker shows the text. Per-line copy-from-first was not reinstated.
 
 Key functions:
 
-renderBranding() — renders the branding controls, then calls renderPreview()
-renderPreview() — builds the garment preview cards beneath
-togglePos(uid, posId) — ticks/unticks a position, updates price, re-renders preview
-handleFile(uid, posId, input) — captures uploaded file, refreshes logo picker in preview
-renderPreviewCard(uid) — partial re-render of one preview card (used on drag/click)
-Preview position coordinates are defined in POS_TEMPLATES (JS object) keyed by garment template type (tshirt, hoodie, polo, cap, beanie, bag). Each position has { id, label, top, left, size } as percentages of the image container.
+renderPreview() — builds the Garment Preview (header + notice + one card per line); the entry point for step 3 (called by goStep(2))
+renderPreviewCard(uid) — partial re-render of a single card on select / place / clear / toggle / logo change
+renderLogoAreaHTML(uid) — the per-card logo library: tiles + Upload/Add-text controls + the inline text/edit forms
+selectPreviewPos, placePreviewLogo(uid,logoId), clearPreviewLogo — position selection and placement (placement stores the logo id; the logo is resolved live)
+handlePreviewUpload(uid, input) — captures one or more uploaded files (kind:'file') into previewUploadedLogos
+toggleTextLogoForm / commitTextLogo — create a typed text logo (kind:'text')
+startEditLogo / closeLogoEdit / updateLogoField — per-logo notes / text / font editing
+syncLineBranding(uid) — rebuilds line.positions (price-bucket keys) from the placed logos
+previewPriceBarHTML(line) — the per-card price bar; lineBrandingDetails(line) — placed positions with kind/file/text/font/notes for the order payload & email
+brandingKey(label) — normalises a position label to its price-bucket key; esc() — HTML-escapes user-supplied strings
 
-⚠️ The preview coordinates are currently placeholders and known to be inaccurate. This is the top outstanding task — see below.
+Preview position coordinates are per colour: PRODUCT_POSITIONS_BY_COLOUR (code → colour → front/back) holds the calibrated values; getProductPositions(code, colour) returns the colour's set, falling back to the single-set PRODUCT_POSITIONS reference (used by JH06J/JH30J/BC015/BG212 — "no change" — and any uncalibrated colour). getPositions(code, colour, view) is the accessor used throughout the preview. Each position is { id, label, top, left, size } as percentages of the image box.
+
+⚠️ Per-colour coordinates were calibrated with nxt_calibrator_v2.html and wired in; still worth a visual spot-check across colours before go-live — see Outstanding Tasks.
 
 Calibrator Tool — How It Works
 
@@ -403,9 +414,9 @@ Single HTML file — no build system, no npm, no dependencies. The entire form i
 
 No payment in the form — customers receive a payment link separately after approving the mockup. The form is purely for capturing the order details.
 
-Submission via Zapier webhook — the form POSTs order data as JSON to a Zapier webhook which emails the NX team. The webhook URL was removed from the form during development and must be re-added before launch. Generate a fresh webhook URL — the old one was exposed in chat and should be considered compromised.
+Submission via Zoho Flow webhook — submitForm() POSTs multipart/form-data to a Zoho Flow incoming webhook (ZOHO_WEBHOOK_URL const). Hybrid shape: flat top-level fields (contact/delivery/totals) + email_summary (human-readable) + order_json (full structured order) + the placed logo files as file parts (file1..fileN, deduped; manifest in order_json.attachments). Fire-and-forget with mode:'no-cors' — cross-origin webhook responses can't be read, so success shows unless the request itself throws (network error → #submitErr). Only files actually placed on a position are attached; text logos travel in the JSON/summary. Heads-up: the zapikey is in the URL and visible in page source (spam risk) — a honeypot or Cloudflare-Worker proxy can harden this later.
 
-File uploads not yet wired — artwork upload UI exists and captures the filename, but actual file transfer to storage is not implemented. Plan is Nextcloud + Cloudflare Worker. Parked until launch.
+File uploads not yet wired — the preview's "+ Upload logo" control captures the file object and filename in memory, but actual file transfer to storage is not implemented. Plan is Nextcloud + Cloudflare Worker. Parked until launch.
 
 BigCommerce image CDN — all product images are served from the BigCommerce store's content directory. The folder is named 02 - Ralawise Image (Do not use) — the "Do not use" refers to the raw supplier images, not the CDN URL. The URLs work fine.
 
@@ -421,9 +432,9 @@ When the customer hits Submit on step 6:
 
 Form validates required fields
 Builds a structured JSON payload of the entire order
-POSTs to the Zapier webhook URL
+POSTs multipart/form-data (fields + placed logo files) to the Zoho Flow webhook
 Shows a success screen
-The Zapier zap routes the submission to the NX team email. Katie or Freddie then manually creates the BigCommerce products and payment link. The webhook URL needs to be added back to the form before go-live — look for handleSubmit() and the fetch() call inside it.
+The Zoho Flow webhook routes the submission to the NX team email. Katie or Freddie then manually creates the BigCommerce products and payment link. The webhook is wired in submitForm() (ZOHO_WEBHOOK_URL); collectPlacedFiles() builds the deduped attachment list.
 
 Phase 2 (future)
 
@@ -454,13 +465,13 @@ Outstanding Tasks
 
 🔴 Critical (blocks go-live)
 
-1. Calibrate logo position coordinates Use nx_calibrator.html with real product imagery showing correct logo placements. Export the PRODUCT_POSITIONS JSON and paste it back to Claude to wire into the form's POS_TEMPLATES. This replaces the current placeholder coordinates which are known to be wrong.
+1. Calibrate logo position coordinates DONE (May 2026) — per-colour coordinates calibrated in nxt_calibrator_v2.html and wired into the order form as PRODUCT_POSITIONS_BY_COLOUR (13 products / 182 colours). JH06J, JH30J, BC015, BG212 (positions identical across colours — "no change needed") and any uncalibrated colour fall back to the single-set PRODUCT_POSITIONS reference via getProductPositions(). Remaining: a visual spot-check across colour variants before go-live, and per-colour calibration of the reference-only products if their variants ever need it.
 
-2. Re-add Zapier webhook URL Generate a fresh webhook URL in Zapier (the old one is compromised). Add it to handleSubmit() in the order form.
+2. Webhook DONE (May 2026) — submitForm() POSTs multipart/form-data to a Zoho Flow webhook (ZOHO_WEBHOOK_URL). Remaining hardening (optional, before/at launch): the zapikey is exposed in page source, so consider a honeypot field and/or proxying via a Cloudflare Worker to curb spam; and confirm Zoho Flow's payload-size limit is comfortable for multiple large artwork files.
 
 🟡 Before launch
 
-3. Artwork file upload Implement actual file upload — plan is Nextcloud + Cloudflare Worker. Currently the form captures filenames only; the files themselves go nowhere.
+3. Artwork file upload Implement actual file upload — plan is Nextcloud + Cloudflare Worker. Currently the preview captures the file objects in memory (previewUploadedLogos); they are not yet transferred to storage.
 
 4. BigCommerce embed test Paste the full HTML into a BigCommerce Custom HTML widget on a Web Page and test end-to-end in that environment. Check for any CSP or iframe issues.
 
@@ -560,5 +571,65 @@ May 2026
 Katie
 
 CONTEXT.md updated with two-phase roadmap (Phase 1 independent form, Phase 2 BigCommerce-integrated)
+
+May 2026
+
+Claude
+
+Page 3 redesign — Branding panel removed; logo position + artwork selection consolidated into the Garment Preview. The preview now drives the live price tier and the submitted order (positions mapped to free/small/large; Upper Back & Tail = large). Product cards switched to a single vertical list. Text-only logos and copy-from-first dropped.
+
+May 2026
+
+Freddie
+
+Removed the redundant Back Centre position and merged the duplicate "shoulder" key into "shoulders" across PRODUCT_POSITIONS and the price buckets.
+
+May 2026
+
+Claude
+
+Multi-image upload, then per-logo Upload/Text restored. Each logo library item is an uploaded file (multi-select; AI/EPS/PDF/PNG/SVG) or a typed text logo, with an optional colour-notes/description field (and font for text). Text logos are placeable like images; payload & email carry kind/text/font/notes; user strings escaped.
+
+May 2026
+
+Claude
+
+PDF/EPS/AI now show a clear file-type placeholder (browsers cannot rasterise these client-side) with robust extension-based detection instead of a blank/broken image. Garment preview image enlarged.
+
+May 2026
+
+Claude
+
+Pricing switched to an additive per-logo model: base = product rrp, first small logo free, each further small +£2.50, each large +£4.00 (constants SMALL_LOGO_FEE / LARGE_LOGO_FEE / FREE_SMALL_LOGOS). Removed the rrpSmall/rrpLarge/rrpBoth fields and priceTier(); order payload/email now carry base_price, small_logos, large_logos and logo_supplement instead of price_tier.
+
+May 2026
+
+Claude
+
+Pricing fix: Left Breast / Front Panel are now classed as small logos (added to SMALL_POS_KEYS). Previously they were a separate free base logo on top of the free first small, so Left + Right Breast incurred no charge. Now the single free-small allowance covers the main logo and the second breast logo is correctly +£2.50.
+
+May 2026
+
+Claude
+
+Added nxt_calibrator_v2.html — per-colour calibrator. Driven by the order form's PRODUCT_IMAGES manifest (17 products, 211 colours, ~422 front/back images); every colour seeded from the current PRODUCT_POSITIONS reference, manual nudge per image, colour stepper, progress counts, "apply to all colours" accelerator. Outputs PRODUCT_POSITIONS_BY_COLOUR (code → colour → front/back). Order-form wiring to consume per-colour positions is a deferred follow-up.
+
+May 2026
+
+Claude
+
+Wired per-colour calibration into the order form. Added PRODUCT_POSITIONS_BY_COLOUR (14 products / 196 colours, from nxt_calibrator_v2.html) and getProductPositions(code, colour) — per-colour positions with fallback to the single-set PRODUCT_POSITIONS reference for JH06J/BC015/BG212 ("no change") and any uncalibrated colour. getPositions is now colour-aware (code, colour, view); preview/markers/pricing-sync/payload all resolve positions per selected colour.
+
+May 2026
+
+Claude
+
+Wired submission to a Zoho Flow webhook. submitForm() now POSTs multipart/form-data (hybrid: flat contact/delivery/total fields + email_summary + order_json + deduped placed-logo file parts file1..N with an attachments manifest) via mode:'no-cors', fire-and-forget (network error → #submitErr, button re-enabled). Added ZOHO_WEBHOOK_URL + collectPlacedFiles(). zapikey is exposed in page source — hardening (honeypot / Worker proxy) noted as optional follow-up.
+
+May 2026
+
+Claude
+
+Removed JH30J from PRODUCT_POSITIONS_BY_COLOUR (14→13 products). JH30J's logo positions are identical across all colours, so it now uses the single-set PRODUCT_POSITIONS reference (front + back). Fixes its back view not showing: back images existed but the empty per-colour back array was shadowing the reference's back positions (Shoulders/Upper Back/Tail), so hasBack was false. No fallback-logic change.
 
 Update this table whenever a significant change is made to either file.
