@@ -1678,7 +1678,18 @@ function updateImgViewer(uid, colour) {
   const front = document.getElementById(`imgv-front-${uid}`);
   const back  = document.getElementById(`imgv-back-${uid}`);
   if (front) { front.style.display = 'block'; front.src = colourImgs.front; }
-  if (back)  { back.style.display  = 'block'; back.src  = colourImgs.back;  }
+  if (back) {
+    const slot = back.closest('.img-viewer-slot');
+    const grid = back.closest('.img-viewer-imgs');
+    if (hasBackImg(colourImgs.back)) {
+      back.style.display = 'block'; back.src = colourImgs.back;
+      if (slot) slot.style.display = '';
+      if (grid) grid.style.gridTemplateColumns = '';
+    } else {
+      if (slot) slot.style.display = 'none';
+      if (grid) grid.style.gridTemplateColumns = '1fr';
+    }
+  }
 }
 
 /* ── STEP NAV (click done steps to go back) ── */
@@ -4410,6 +4421,8 @@ function getProductPositions(code, colour) {
   if (byCol && byCol[colour]) return byCol[colour];
   return PRODUCT_POSITIONS[code] || { front: [], back: [] };
 }
+// A back-image URL is "real" only if it isn't the placeholder "nan".
+function hasBackImg(s) { return !!s && String(s).trim().toLowerCase() !== 'nan'; }
 function getPositions(code, colour, view) {
   view = view || 'front';
   const p = getProductPositions(code, colour);
@@ -4540,9 +4553,9 @@ function renderPreview() {
     // Get image for current colour
     const imgs = PRODUCT_IMAGES[line.code];
     const colourImgs = imgs ? (imgs[line.colour] || Object.values(imgs)[0]) : null;
-    const imgSrc = colourImgs ? (view === 'back' ? colourImgs.back : colourImgs.front) : '';
+    const imgSrc = colourImgs ? (view === 'back' ? (hasBackImg(colourImgs.back) ? colourImgs.back : '') : colourImgs.front) : '';
     const backPos = getProductPositions(line.code, line.colour).back;
-    const hasBack = !!(colourImgs && colourImgs.back) && Array.isArray(backPos) && backPos.length > 0;
+    const hasBack = hasBackImg(colourImgs && colourImgs.back) && Array.isArray(backPos) && backPos.length > 0;
 
     const card = document.createElement('div');
     card.className = 'preview-card';
@@ -4828,7 +4841,7 @@ function renderPreviewCard(uid) {
   const colourImgs = imgs ? (imgs[line.colour] || Object.values(imgs)[0]) : null;
   const img = document.getElementById('prev-img-' + uid);
   if (img && colourImgs) {
-    const newSrc = view === 'back' ? colourImgs.back : colourImgs.front;
+    const newSrc = view === 'back' ? (hasBackImg(colourImgs.back) ? colourImgs.back : '') : colourImgs.front;
     if (newSrc && img.getAttribute('src') !== newSrc) { img.src = newSrc; img.style.display = 'block'; }
   }
 
